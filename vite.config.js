@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react()],
-  base: process.env.NODE_ENV === 'production' ? '/CSCI282-Slides/' : '/',
-})
+  base: command === 'build' ? '/CSCI282-Slides/' : '/',
+}))
