@@ -1,4 +1,4 @@
-name: Deploy pl-slides to GitHub Pages
+name: Deploy CSCI282 Slides to GitHub Pages
 
 on:
   push:
@@ -25,6 +25,7 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ./pl-slides
+          path: ./
       - id: deployment
         uses: actions/deploy-pages@v4
+
