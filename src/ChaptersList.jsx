@@ -1,5 +1,8 @@
 import React from 'react';
 
+// Configure which chapters to display (use null or empty array to show all)
+const VISIBLE_CHAPTERS = [1, 2];
+
 const CHAPTERS_META = [
   { id: 1, title: 'Introduction', subtitle: 'Why Study Programming Languages?', color: '#f97316' },
   { id: 2, title: 'Programming Language Syntax', subtitle: 'From Characters to Parse Trees', color: '#8b5cf6' },
@@ -16,6 +19,10 @@ const CHAPTERS_META = [
 ];
 
 export default function ChaptersList({ onSelectChapter }) {
+  const visibleChapters = VISIBLE_CHAPTERS?.length > 0
+    ? CHAPTERS_META.filter(ch => VISIBLE_CHAPTERS.includes(ch.id))
+    : CHAPTERS_META;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <header className="border-b border-slate-700 bg-slate-900/80 backdrop-blur-sm">
@@ -28,7 +35,7 @@ export default function ChaptersList({ onSelectChapter }) {
         <h2 className="text-3xl font-bold text-white mb-2">Chapters</h2>
         <p className="text-slate-400 mb-10">Select a chapter to view its slides.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {CHAPTERS_META.map((ch) => (
+          {visibleChapters.map((ch) => (
             <button
               key={ch.id}
               onClick={() => onSelectChapter(ch.id)}
