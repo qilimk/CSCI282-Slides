@@ -1438,7 +1438,7 @@ const SlideRenderer = ({ slide }) => {
 // ============================================================================
 // MAIN APP
 // ============================================================================
-export default function Chapter2Slides() {
+export default function Chapter2Slides({ onBackToChapters }) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showMenu, setShowMenu] = useState(false);
 
@@ -1478,6 +1478,17 @@ export default function Chapter2Slides() {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-slate-400">{currentSlide + 1} / {SLIDES.length}</span>
+            <button
+              type="button"
+              onClick={onBackToChapters}
+              aria-label="Back to chapters"
+              title="Back to chapters"
+              className="p-1.5 rounded-full border border-slate-600 text-slate-300 hover:text-white hover:border-slate-400 hover:bg-slate-700/60 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
             <span className="px-3 py-1 bg-slate-700 text-slate-300 rounded text-sm">{slide.section}</span>
           </div>
         </div>
