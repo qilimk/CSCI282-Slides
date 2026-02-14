@@ -1139,6 +1139,7 @@ export default function Chapter5Slides({ onBackToChapters }) {
         </div>
         <div className="text-center text-slate-500 text-sm pb-2">
           <kbd className="px-2 py-1 bg-slate-700 rounded">←</kbd> <kbd className="px-2 py-1 bg-slate-700 rounded">→</kbd> navigate • <kbd className="px-2 py-1 bg-slate-700 rounded">M</kbd> menu
+          <p className="mt-1">&copy; {new Date().getFullYear()} Dr. Qi Li. All rights reserved.</p>
         </div>
       </footer>
     </div>

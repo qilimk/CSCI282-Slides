@@ -51,7 +51,8 @@ export default function ChaptersList({ onSelectChapter }) {
       </main>
       <footer className="border-t border-slate-700 mt-16 py-6">
         <div className="max-w-6xl mx-auto px-4 text-center text-slate-500 text-sm">
-          Use arrow keys or on-screen controls to navigate. Press <kbd className="px-1.5 py-0.5 bg-slate-700 rounded text-slate-300">M</kbd> for menu.
+          <p>Use arrow keys or on-screen controls to navigate. Press <kbd className="px-1.5 py-0.5 bg-slate-700 rounded text-slate-300">M</kbd> for menu.</p>
+          <p className="mt-2">&copy; {new Date().getFullYear()} Dr. Qi Li. All rights reserved.</p>
         </div>
       </footer>
     </div>
