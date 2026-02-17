@@ -1,7 +1,7 @@
 import React from 'react';
 
 // Configure which chapters to display (use null or empty array to show all)
-const VISIBLE_CHAPTERS = [1, 2];
+const VISIBLE_CHAPTERS = [1, 2, 3, 4];
 
 const CHAPTERS_META = [
   { id: 1, title: 'Introduction', subtitle: 'Why Study Programming Languages?', color: '#f97316' },

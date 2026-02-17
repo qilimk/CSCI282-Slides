@@ -17,16 +17,16 @@ import Chapter12 from './chapter12'
 const CHAPTERS = [
   { id: 1, Component: Chapter1 },
   { id: 2, Component: Chapter2 },
-  // { id: 3, Component: Chapter3 },
-  // { id: 4, Component: Chapter4 },
-  // { id: 5, Component: Chapter5 },
-  // { id: 6, Component: Chapter6 },
-  // { id: 7, Component: Chapter7 },
-  // { id: 8, Component: Chapter8 },
-  // { id: 9, Component: Chapter9 },
-  // { id: 10, Component: Chapter10 },
-  // { id: 11, Component: Chapter11 },
-  // { id: 12, Component: Chapter12 },
+  { id: 3, Component: Chapter3 },
+  { id: 4, Component: Chapter4 },
+  { id: 5, Component: Chapter5 },
+  { id: 6, Component: Chapter6 },
+  { id: 7, Component: Chapter7 },
+  { id: 8, Component: Chapter8 },
+  { id: 9, Component: Chapter9 },
+  { id: 10, Component: Chapter10 },
+  { id: 11, Component: Chapter11 },
+  { id: 12, Component: Chapter12 },
 ]
 
 function getChapterById(id) {
