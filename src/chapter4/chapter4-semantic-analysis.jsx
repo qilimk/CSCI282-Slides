@@ -162,9 +162,23 @@ const SLIDES = [
     interactive: { type: "attribute-grammar" }
   },
 
-  // SYNTHESIZED ATTRIBUTES
+  // PARSE TREE CONSTRUCTION (moved from evaluation section)
   {
     id: 8,
+    section: "attributes",
+    type: "interactive",
+    title: "Parse Tree Construction: (1 + 3) * 2",
+    content: {
+      expression: "(1 + 3) * 2",
+      expectedResult: 8,
+      description: "Watch the parse tree being built step-by-step with attribute values propagating upward:"
+    },
+    interactive: { type: "parse-tree-visual" }
+  },
+
+  // SYNTHESIZED ATTRIBUTES
+  {
+    id: 9,
     section: "attributes",
     type: "concept",
     title: "Synthesized Attributes",
@@ -186,7 +200,7 @@ const SLIDES = [
 
   // INHERITED ATTRIBUTES
   {
-    id: 9,
+    id: 10,
     section: "attributes",
     type: "concept",
     title: "Inherited Attributes",
@@ -208,7 +222,7 @@ const SLIDES = [
 
   // SYNTHESIZED VS INHERITED VISUAL
   {
-    id: 10,
+    id: 11,
     section: "attributes",
     type: "interactive",
     title: "Attribute Flow Visualization",
@@ -220,7 +234,7 @@ const SLIDES = [
 
   // S-ATTRIBUTED GRAMMARS
   {
-    id: 11,
+    id: 12,
     section: "grammar-types",
     type: "definition",
     title: "S-Attributed Grammars",
@@ -238,7 +252,7 @@ const SLIDES = [
 
   // L-ATTRIBUTED GRAMMARS
   {
-    id: 12,
+    id: 13,
     section: "grammar-types",
     type: "definition",
     title: "L-Attributed Grammars",
@@ -271,7 +285,7 @@ const SLIDES = [
 
   // LL VS LR ATTRIBUTE EVALUATION
   {
-    id: 13,
+    id: 14,
     section: "grammar-types",
     type: "comparison",
     title: "Attribute Evaluation: LL vs LR",
@@ -294,23 +308,52 @@ const SLIDES = [
     }
   },
 
-  // EVALUATING (1+3)*2 WITH VISUAL TREE
+  // S-ATTRIBUTED GRAMMAR EXAMPLE
   {
-    id: 14,
+    id: 15,
     section: "evaluation",
     type: "interactive",
-    title: "Parse Tree Construction: (1 + 3) * 2",
+    title: "S-Attributed Grammar: Bottom-Up Tree Construction",
     content: {
-      expression: "(1 + 3) * 2",
-      expectedResult: 8,
-      description: "Watch the parse tree being built step-by-step with attribute values propagating upward:"
+      description: "S-attributed grammars use ONLY synthesized attributes. The syntax tree is built bottom-up during LR parsing.",
+      grammar: [
+        "E → E + T    { E.ptr = makeNode('+', E₁.ptr, T.ptr) }",
+        "E → T        { E.ptr = T.ptr }",
+        "T → T * F    { T.ptr = makeNode('*', T₁.ptr, F.ptr) }",
+        "T → F        { T.ptr = F.ptr }",
+        "F → ( E )    { F.ptr = E.ptr }",
+        "F → const    { F.ptr = makeLeaf(const.val) }"
+      ],
+      expression: "1 + 3 * 2"
     },
-    interactive: { type: "parse-tree-visual" }
+    interactive: { type: "s-attributed-tree" }
+  },
+
+  // L-ATTRIBUTED GRAMMAR EXAMPLE
+  {
+    id: 16,
+    section: "evaluation",
+    type: "interactive",
+    title: "L-Attributed Grammar: Top-Down Tree Construction",
+    content: {
+      description: "L-attributed grammars allow both synthesized and inherited attributes, evaluated left-to-right during LL parsing.",
+      grammar: [
+        "E  → T E'           { E'.inh = T.ptr; E.ptr = E'.syn }",
+        "E' → + T E'₁        { E'₁.inh = makeNode('+', E'.inh, T.ptr); E'.syn = E'₁.syn }",
+        "E' → ε              { E'.syn = E'.inh }",
+        "T  → F T'           { T'.inh = F.ptr; T.ptr = T'.syn }",
+        "T' → * F T'₁        { T'₁.inh = makeNode('*', T'.inh, F.ptr); T'.syn = T'₁.syn }",
+        "T' → ε              { T'.syn = T'.inh }",
+        "F  → const          { F.ptr = makeLeaf(const.val) }"
+      ],
+      expression: "1 + 3 * 2"
+    },
+    interactive: { type: "l-attributed-tree" }
   },
 
   // PARSE TREE VS AST VISUAL
   {
-    id: 15,
+    id: 17,
     section: "evaluation",
     type: "interactive",
     title: "Visual: Parse Tree vs AST",
@@ -322,7 +365,7 @@ const SLIDES = [
 
   // ACTION ROUTINES
   {
-    id: 16,
+    id: 18,
     section: "action",
     type: "concept",
     title: "Action Routines",
@@ -344,7 +387,7 @@ const SLIDES = [
 
   // ACTION ROUTINE EXAMPLE
   {
-    id: 17,
+    id: 19,
     section: "action",
     type: "code",
     title: "Action Routines in Practice",
@@ -373,7 +416,7 @@ factor: '(' expr ')'  { $$ = $2; }
 
   // ATTRIBUTE STACK
   {
-    id: 18,
+    id: 20,
     section: "action",
     type: "interactive",
     title: "Attribute Stack Management",
@@ -385,7 +428,7 @@ factor: '(' expr ')'  { $$ = $2; }
 
   // PARSE TREE VS SYNTAX TREE
   {
-    id: 19,
+    id: 21,
     section: "trees",
     type: "comparison",
     title: "Parse Tree vs Syntax Tree (AST)",
@@ -410,7 +453,7 @@ factor: '(' expr ')'  { $$ = $2; }
 
   // PARSE VS SYNTAX TREE DETAIL
   {
-    id: 20,
+    id: 22,
     section: "trees",
     type: "table",
     title: "Parse Tree vs Syntax Tree Details",
@@ -430,7 +473,7 @@ factor: '(' expr ')'  { $$ = $2; }
 
   // BUILDING SYNTAX TREES
   {
-    id: 21,
+    id: 23,
     section: "trees",
     type: "concept",
     title: "Building Syntax Trees",
@@ -452,7 +495,7 @@ factor: '(' expr ')'  { $$ = $2; }
 
   // AST CONSTRUCTION EXAMPLE
   {
-    id: 22,
+    id: 24,
     section: "trees",
     type: "interactive",
     title: "AST Construction for (1 + 3) * 2",
@@ -465,7 +508,7 @@ factor: '(' expr ')'  { $$ = $2; }
 
   // TREE GRAMMAR
   {
-    id: 23,
+    id: 25,
     section: "trees",
     type: "concept",
     title: "Tree Grammars",
@@ -486,7 +529,7 @@ factor: '(' expr ')'  { $$ = $2; }
 
   // PRACTICAL SEMANTIC ANALYSIS
   {
-    id: 24,
+    id: 26,
     section: "practical",
     type: "concept",
     title: "Practical Semantic Analysis Tasks",
@@ -505,7 +548,7 @@ factor: '(' expr ')'  { $$ = $2; }
 
   // SYMBOL TABLE
   {
-    id: 25,
+    id: 27,
     section: "practical",
     type: "concept",
     title: "Symbol Table",
@@ -527,7 +570,7 @@ factor: '(' expr ')'  { $$ = $2; }
 
   // SUMMARY
   {
-    id: 26,
+    id: 28,
     section: "summary",
     type: "summary",
     title: "Chapter 4 Summary",
@@ -1324,6 +1367,742 @@ const ASTvsParseTree = () => {
   );
 };
 
+// S-Attributed Grammar Tree Construction Demo
+const SAttributedTreeDemo = () => {
+  const [step, setStep] = useState(0);
+
+  // SVG Tree Node component
+  const TreeNodeSVG = ({ label, x, y, parentX, parentY, highlight, isNew }) => {
+    const size = 36;
+    return (
+      <g>
+        {parentX !== undefined && (
+          <line
+            x1={parentX} y1={parentY + size/2}
+            x2={x} y2={y - size/2}
+            stroke={highlight ? "#10b981" : "#475569"}
+            strokeWidth={2}
+          />
+        )}
+        <circle
+          cx={x} cy={y}
+          r={size/2}
+          fill={isNew ? "#10b981" : highlight ? "#3b82f6" : "#1e293b"}
+          stroke={isNew ? "#34d399" : highlight ? "#60a5fa" : "#475569"}
+          strokeWidth={2}
+        />
+        <text x={x} y={y + 5} textAnchor="middle" fill="white" fontSize={14} fontWeight="bold">
+          {label}
+        </text>
+      </g>
+    );
+  };
+
+  const steps = [
+    {
+      desc: "Start: Parse 1 + 3 * 2 using LR (bottom-up) parsing",
+      stack: ["$"],
+      input: "1 + 3 * 2 $",
+      tree: [],
+      action: "Initialize parser",
+      rule: ""
+    },
+    {
+      desc: "Shift: Read '1', create leaf node",
+      stack: ["$", "1"],
+      input: "+ 3 * 2 $",
+      tree: [{ id: 'n1', label: '1', x: 100, y: 200 }],
+      action: "Shift 1",
+      rule: "F.ptr = makeLeaf(1)",
+      newNode: 'n1'
+    },
+    {
+      desc: "Reduce: F → const",
+      stack: ["$", "F"],
+      input: "+ 3 * 2 $",
+      tree: [
+        { id: 'f1', label: 'F', x: 100, y: 140 },
+        { id: 'n1', label: '1', x: 100, y: 200, parent: 'f1' }
+      ],
+      action: "Reduce F → const",
+      rule: "F.ptr = makeLeaf(1)",
+      newNode: 'f1'
+    },
+    {
+      desc: "Reduce: T → F (propagate pointer up)",
+      stack: ["$", "T"],
+      input: "+ 3 * 2 $",
+      tree: [
+        { id: 't1', label: 'T', x: 100, y: 80 },
+        { id: 'f1', label: 'F', x: 100, y: 140, parent: 't1' },
+        { id: 'n1', label: '1', x: 100, y: 200, parent: 'f1' }
+      ],
+      action: "Reduce T → F",
+      rule: "T.ptr = F.ptr",
+      newNode: 't1'
+    },
+    {
+      desc: "Reduce: E → T (propagate pointer up)",
+      stack: ["$", "E"],
+      input: "+ 3 * 2 $",
+      tree: [
+        { id: 'e1', label: 'E', x: 100, y: 40 },
+        { id: 't1', label: 'T', x: 100, y: 80, parent: 'e1' },
+        { id: 'f1', label: 'F', x: 100, y: 140, parent: 't1' },
+        { id: 'n1', label: '1', x: 100, y: 200, parent: 'f1' }
+      ],
+      action: "Reduce E → T",
+      rule: "E.ptr = T.ptr",
+      newNode: 'e1'
+    },
+    {
+      desc: "Shift: Read '+' operator",
+      stack: ["$", "E", "+"],
+      input: "3 * 2 $",
+      tree: [
+        { id: 'e1', label: 'E', x: 100, y: 40 },
+        { id: 't1', label: 'T', x: 100, y: 80, parent: 'e1' },
+        { id: 'f1', label: 'F', x: 100, y: 140, parent: 't1' },
+        { id: 'n1', label: '1', x: 100, y: 200, parent: 'f1' }
+      ],
+      action: "Shift +",
+      rule: ""
+    },
+    {
+      desc: "Shift: Read '3', create leaf node",
+      stack: ["$", "E", "+", "3"],
+      input: "* 2 $",
+      tree: [
+        { id: 'e1', label: 'E', x: 100, y: 40 },
+        { id: 't1', label: 'T', x: 100, y: 80, parent: 'e1' },
+        { id: 'f1', label: 'F', x: 100, y: 140, parent: 't1' },
+        { id: 'n1', label: '1', x: 100, y: 200, parent: 'f1' },
+        { id: 'n3', label: '3', x: 250, y: 200 }
+      ],
+      action: "Shift 3",
+      rule: "F.ptr = makeLeaf(3)",
+      newNode: 'n3'
+    },
+    {
+      desc: "Reduce: F → const, T → F",
+      stack: ["$", "E", "+", "T"],
+      input: "* 2 $",
+      tree: [
+        { id: 'e1', label: 'E', x: 100, y: 40 },
+        { id: 't1', label: 'T', x: 100, y: 80, parent: 'e1' },
+        { id: 'f1', label: 'F', x: 100, y: 140, parent: 't1' },
+        { id: 'n1', label: '1', x: 100, y: 200, parent: 'f1' },
+        { id: 't2', label: 'T', x: 250, y: 80 },
+        { id: 'f2', label: 'F', x: 250, y: 140, parent: 't2' },
+        { id: 'n3', label: '3', x: 250, y: 200, parent: 'f2' }
+      ],
+      action: "Reduce F → const, T → F",
+      rule: "T.ptr = F.ptr = makeLeaf(3)",
+      newNode: 't2'
+    },
+    {
+      desc: "Shift: Read '*' (higher precedence, don't reduce E + T yet)",
+      stack: ["$", "E", "+", "T", "*"],
+      input: "2 $",
+      tree: [
+        { id: 'e1', label: 'E', x: 100, y: 40 },
+        { id: 't1', label: 'T', x: 100, y: 80, parent: 'e1' },
+        { id: 'f1', label: 'F', x: 100, y: 140, parent: 't1' },
+        { id: 'n1', label: '1', x: 100, y: 200, parent: 'f1' },
+        { id: 't2', label: 'T', x: 250, y: 80 },
+        { id: 'f2', label: 'F', x: 250, y: 140, parent: 't2' },
+        { id: 'n3', label: '3', x: 250, y: 200, parent: 'f2' }
+      ],
+      action: "Shift * (precedence)",
+      rule: ""
+    },
+    {
+      desc: "Shift: Read '2', create leaf node",
+      stack: ["$", "E", "+", "T", "*", "2"],
+      input: "$",
+      tree: [
+        { id: 'e1', label: 'E', x: 100, y: 40 },
+        { id: 't1', label: 'T', x: 100, y: 80, parent: 'e1' },
+        { id: 'f1', label: 'F', x: 100, y: 140, parent: 't1' },
+        { id: 'n1', label: '1', x: 100, y: 200, parent: 'f1' },
+        { id: 't2', label: 'T', x: 250, y: 80 },
+        { id: 'f2', label: 'F', x: 250, y: 140, parent: 't2' },
+        { id: 'n3', label: '3', x: 250, y: 200, parent: 'f2' },
+        { id: 'n2', label: '2', x: 370, y: 200 }
+      ],
+      action: "Shift 2",
+      rule: "F.ptr = makeLeaf(2)",
+      newNode: 'n2'
+    },
+    {
+      desc: "Reduce: F → const",
+      stack: ["$", "E", "+", "T", "*", "F"],
+      input: "$",
+      tree: [
+        { id: 'e1', label: 'E', x: 100, y: 40 },
+        { id: 't1', label: 'T', x: 100, y: 80, parent: 'e1' },
+        { id: 'f1', label: 'F', x: 100, y: 140, parent: 't1' },
+        { id: 'n1', label: '1', x: 100, y: 200, parent: 'f1' },
+        { id: 't2', label: 'T', x: 250, y: 80 },
+        { id: 'f2', label: 'F', x: 250, y: 140, parent: 't2' },
+        { id: 'n3', label: '3', x: 250, y: 200, parent: 'f2' },
+        { id: 'f3', label: 'F', x: 370, y: 140 },
+        { id: 'n2', label: '2', x: 370, y: 200, parent: 'f3' }
+      ],
+      action: "Reduce F → const",
+      rule: "F.ptr = makeLeaf(2)",
+      newNode: 'f3'
+    },
+    {
+      desc: "Reduce: T → T * F - Create '*' node with children",
+      stack: ["$", "E", "+", "T"],
+      input: "$",
+      tree: [
+        { id: 'e1', label: 'E', x: 100, y: 40 },
+        { id: 't1', label: 'T', x: 100, y: 80, parent: 'e1' },
+        { id: 'f1', label: 'F', x: 100, y: 140, parent: 't1' },
+        { id: 'n1', label: '1', x: 100, y: 200, parent: 'f1' },
+        { id: 'mult', label: '*', x: 310, y: 80 },
+        { id: 'n3', label: '3', x: 250, y: 140, parent: 'mult' },
+        { id: 'n2', label: '2', x: 370, y: 140, parent: 'mult' }
+      ],
+      action: "Reduce T → T * F",
+      rule: "T.ptr = makeNode('*', T₁.ptr, F.ptr)",
+      newNode: 'mult'
+    },
+    {
+      desc: "Reduce: E → E + T - Create '+' node with children (Final AST!)",
+      stack: ["$", "E"],
+      input: "$",
+      tree: [
+        { id: 'plus', label: '+', x: 220, y: 40 },
+        { id: 'n1', label: '1', x: 120, y: 120, parent: 'plus' },
+        { id: 'mult', label: '*', x: 320, y: 120, parent: 'plus' },
+        { id: 'n3', label: '3', x: 260, y: 200, parent: 'mult' },
+        { id: 'n2', label: '2', x: 380, y: 200, parent: 'mult' }
+      ],
+      action: "Reduce E → E + T",
+      rule: "E.ptr = makeNode('+', E₁.ptr, T.ptr)",
+      newNode: 'plus'
+    }
+  ];
+
+  const current = steps[step];
+
+  const buildParentLookup = (nodes) => {
+    const lookup = {};
+    nodes.forEach(n => {
+      if (n.parent) {
+        const parent = nodes.find(p => p.id === n.parent);
+        if (parent) lookup[n.id] = { x: parent.x, y: parent.y };
+      }
+    });
+    return lookup;
+  };
+
+  const parentLookup = buildParentLookup(current.tree);
+
+  return (
+    <div className="bg-slate-800 rounded-xl p-4 mt-4">
+      <div className="text-emerald-400 text-base mb-4 font-mono">
+        S-Attributed Grammar: Bottom-Up AST Construction for 1 + 3 * 2
+      </div>
+
+      {/* Grammar reference */}
+      <div className="bg-slate-900 p-3 rounded-lg mb-4 text-sm">
+        <div className="text-slate-400 mb-1">Key Rules (synthesized attributes only ↑):</div>
+        <div className="font-mono text-emerald-400 grid grid-cols-2 gap-1">
+          <div>F → const {"{"} F.ptr = makeLeaf(val) {"}"}</div>
+          <div>T → F {"{"} T.ptr = F.ptr {"}"}</div>
+          <div>T → T * F {"{"} T.ptr = makeNode('*', T₁.ptr, F.ptr) {"}"}</div>
+          <div>E → E + T {"{"} E.ptr = makeNode('+', E₁.ptr, T.ptr) {"}"}</div>
+        </div>
+      </div>
+
+      {/* Parser state */}
+      <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="bg-slate-900 p-3 rounded-lg">
+          <div className="text-slate-500 text-xs mb-1">Parser Stack</div>
+          <div className="font-mono text-white text-sm">{current.stack.join(' ')}</div>
+        </div>
+        <div className="bg-slate-900 p-3 rounded-lg">
+          <div className="text-slate-500 text-xs mb-1">Remaining Input</div>
+          <div className="font-mono text-amber-400 text-sm">{current.input}</div>
+        </div>
+        <div className="bg-slate-900 p-3 rounded-lg">
+          <div className="text-slate-500 text-xs mb-1">Action</div>
+          <div className={`font-mono text-sm ${
+            current.action.includes('Shift') ? 'text-blue-400' :
+            current.action.includes('Reduce') ? 'text-purple-400' : 'text-slate-400'
+          }`}>{current.action}</div>
+        </div>
+      </div>
+
+      {/* Tree visualization */}
+      <div className="bg-slate-900 rounded-lg p-4 mb-4">
+        <div className="text-slate-400 text-sm mb-2">Syntax Tree (built bottom-up):</div>
+        <svg width="100%" height="250" viewBox="0 0 480 250">
+          {current.tree.length === 0 ? (
+            <text x="240" y="125" textAnchor="middle" fill="#64748b" fontSize={14}>
+              Click "Next" to start building the tree
+            </text>
+          ) : (
+            current.tree.map(node => (
+              <TreeNodeSVG
+                key={node.id}
+                label={node.label}
+                x={node.x}
+                y={node.y}
+                parentX={parentLookup[node.id]?.x}
+                parentY={parentLookup[node.id]?.y}
+                highlight={step === steps.length - 1}
+                isNew={node.id === current.newNode}
+              />
+            ))
+          )}
+        </svg>
+      </div>
+
+      {/* Current rule */}
+      {current.rule && (
+        <div className="bg-emerald-500/20 border border-emerald-500 p-3 rounded-lg mb-4">
+          <div className="text-emerald-400 font-mono text-sm">{current.rule}</div>
+          <div className="text-slate-400 text-xs mt-1">↑ Synthesized: attribute flows UP from children to parent</div>
+        </div>
+      )}
+
+      {/* Description */}
+      <div className="bg-slate-900 p-4 rounded-lg mb-4">
+        <span className="text-slate-500 text-sm">Step {step + 1}/{steps.length}: </span>
+        <span className="text-white">{current.desc}</span>
+      </div>
+
+      {/* Final result */}
+      {step === steps.length - 1 && (
+        <div className="bg-emerald-500/20 border-2 border-emerald-500 p-4 rounded-lg mb-4 text-center">
+          <div className="text-emerald-400 text-xl font-bold">Final AST Complete!</div>
+          <div className="text-slate-300 text-sm mt-1">
+            S-Attributed: All attributes (tree pointers) flowed upward during reductions
+          </div>
+        </div>
+      )}
+
+      {/* Controls */}
+      <div className="flex gap-2 justify-center">
+        <button onClick={() => setStep(0)} className="px-4 py-2 bg-slate-700 rounded hover:bg-slate-600">
+          ⏮ Start
+        </button>
+        <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0}
+          className="px-5 py-2 bg-slate-700 rounded disabled:opacity-50 hover:bg-slate-600">
+          ← Prev
+        </button>
+        <button onClick={() => setStep(Math.min(steps.length - 1, step + 1))} disabled={step >= steps.length - 1}
+          className="px-5 py-2 bg-slate-700 rounded disabled:opacity-50 hover:bg-slate-600">
+          Next →
+        </button>
+        <button onClick={() => setStep(steps.length - 1)} className="px-4 py-2 bg-emerald-600 rounded hover:bg-emerald-500">
+          ⏭ End
+        </button>
+      </div>
+
+      {/* Progress dots */}
+      <div className="flex gap-1 justify-center mt-4 flex-wrap">
+        {steps.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setStep(i)}
+            className={`w-2 h-2 rounded-full transition-all ${
+              i === step ? 'bg-emerald-500 w-4' : i < step ? 'bg-emerald-500/50' : 'bg-slate-600'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// L-Attributed Grammar Tree Construction Demo
+const LAttributedTreeDemo = () => {
+  const [step, setStep] = useState(0);
+
+  const TreeNodeSVG = ({ label, x, y, parentX, parentY, highlight, isNew, hasInh, hasSyn }) => {
+    const size = 40;
+    return (
+      <g>
+        {parentX !== undefined && (
+          <line
+            x1={parentX} y1={parentY + size/2}
+            x2={x} y2={y - size/2}
+            stroke={highlight ? "#10b981" : "#475569"}
+            strokeWidth={2}
+          />
+        )}
+        <circle
+          cx={x} cy={y}
+          r={size/2}
+          fill={isNew ? "#10b981" : highlight ? "#3b82f6" : "#1e293b"}
+          stroke={isNew ? "#34d399" : highlight ? "#60a5fa" : "#475569"}
+          strokeWidth={2}
+        />
+        <text x={x} y={y + 5} textAnchor="middle" fill="white" fontSize={12} fontWeight="bold">
+          {label}
+        </text>
+        {/* Inherited attribute indicator */}
+        {hasInh && (
+          <g>
+            <circle cx={x - size/2 - 8} cy={y} r={6} fill="#a855f7" />
+            <text x={x - size/2 - 8} y={y + 3} textAnchor="middle" fill="white" fontSize={8}>↓</text>
+          </g>
+        )}
+        {/* Synthesized attribute indicator */}
+        {hasSyn && (
+          <g>
+            <circle cx={x + size/2 + 8} cy={y} r={6} fill="#3b82f6" />
+            <text x={x + size/2 + 8} y={y + 3} textAnchor="middle" fill="white" fontSize={8}>↑</text>
+          </g>
+        )}
+      </g>
+    );
+  };
+
+  const steps = [
+    {
+      desc: "Start: Parse 1 + 3 * 2 using LL (top-down) parsing with L-attributed grammar",
+      tree: [],
+      attrs: [],
+      action: "Begin recursive descent",
+      rule: "Call E()"
+    },
+    {
+      desc: "E → T E': First call T(), which will return a tree pointer",
+      tree: [
+        { id: 'e', label: 'E', x: 240, y: 40 }
+      ],
+      attrs: [],
+      action: "Expand E",
+      rule: "E → T E'",
+      newNode: 'e'
+    },
+    {
+      desc: "T → F T': Expand T, call F() first",
+      tree: [
+        { id: 'e', label: 'E', x: 240, y: 40 },
+        { id: 't', label: 'T', x: 160, y: 100, parent: 'e' },
+        { id: 'ep', label: "E'", x: 320, y: 100, parent: 'e' }
+      ],
+      attrs: [],
+      action: "Expand T",
+      rule: "T → F T'",
+      newNode: 't'
+    },
+    {
+      desc: "F → const: Match '1', create leaf node",
+      tree: [
+        { id: 'e', label: 'E', x: 240, y: 40 },
+        { id: 't', label: 'T', x: 160, y: 100, parent: 'e' },
+        { id: 'ep', label: "E'", x: 320, y: 100, parent: 'e' },
+        { id: 'f1', label: 'F', x: 100, y: 160, parent: 't' },
+        { id: 'tp1', label: "T'", x: 180, y: 160, parent: 't', hasInh: true }
+      ],
+      attrs: [{ node: 'f1', attr: 'F.ptr = leaf(1)', type: 'syn' }],
+      action: "Match 1",
+      rule: "F.ptr = makeLeaf(1)",
+      newNode: 'f1'
+    },
+    {
+      desc: "T' receives inherited attribute: T'.inh = F.ptr (pointer to leaf '1')",
+      tree: [
+        { id: 'e', label: 'E', x: 240, y: 40 },
+        { id: 't', label: 'T', x: 160, y: 100, parent: 'e' },
+        { id: 'ep', label: "E'", x: 320, y: 100, parent: 'e' },
+        { id: 'f1', label: 'F', x: 100, y: 160, parent: 't' },
+        { id: 'tp1', label: "T'", x: 180, y: 160, parent: 't', hasInh: true }
+      ],
+      attrs: [
+        { node: 'f1', attr: 'F.ptr = leaf(1)', type: 'syn' },
+        { node: 'tp1', attr: "T'.inh = F.ptr", type: 'inh' }
+      ],
+      action: "Pass inh ↓",
+      rule: "T'.inh = F.ptr  (inherited attribute passed DOWN)",
+      newNode: 'tp1'
+    },
+    {
+      desc: "T' → ε: No more * operators, so T'.syn = T'.inh",
+      tree: [
+        { id: 'e', label: 'E', x: 240, y: 40 },
+        { id: 't', label: 'T', x: 160, y: 100, parent: 'e', hasSyn: true },
+        { id: 'ep', label: "E'", x: 320, y: 100, parent: 'e', hasInh: true },
+        { id: 'f1', label: 'F', x: 100, y: 160, parent: 't' },
+        { id: 'tp1', label: "T'", x: 180, y: 160, parent: 't', hasSyn: true }
+      ],
+      attrs: [
+        { node: 'tp1', attr: "T'.syn = T'.inh = leaf(1)", type: 'syn' },
+        { node: 't', attr: "T.ptr = T'.syn = leaf(1)", type: 'syn' }
+      ],
+      action: "T' → ε",
+      rule: "T'.syn = T'.inh (synthesized UP)"
+    },
+    {
+      desc: "E' receives inherited attribute: E'.inh = T.ptr (pointer to '1')",
+      tree: [
+        { id: 'e', label: 'E', x: 240, y: 40 },
+        { id: 't', label: 'T', x: 160, y: 100, parent: 'e', hasSyn: true },
+        { id: 'ep', label: "E'", x: 320, y: 100, parent: 'e', hasInh: true }
+      ],
+      attrs: [
+        { node: 'ep', attr: "E'.inh = T.ptr = leaf(1)", type: 'inh' }
+      ],
+      action: "Pass inh ↓",
+      rule: "E'.inh = T.ptr (inherited DOWN to E')"
+    },
+    {
+      desc: "E' → + T E': Match '+', then parse T (which gives 3 * 2)",
+      tree: [
+        { id: 'e', label: 'E', x: 240, y: 40 },
+        { id: 't', label: 'T', x: 120, y: 100, parent: 'e' },
+        { id: 'ep', label: "E'", x: 340, y: 100, parent: 'e', hasInh: true },
+        { id: 'plus', label: '+', x: 260, y: 160, parent: 'ep' },
+        { id: 't2', label: 'T', x: 340, y: 160, parent: 'ep' },
+        { id: 'ep2', label: "E'", x: 420, y: 160, parent: 'ep', hasInh: true }
+      ],
+      attrs: [
+        { node: 'ep', attr: "E'.inh = leaf(1)", type: 'inh' }
+      ],
+      action: "Match +, expand E'",
+      rule: "E' → + T E'₁"
+    },
+    {
+      desc: "Parse T for '3 * 2': T → F T', F matches 3",
+      tree: [
+        { id: 'e', label: 'E', x: 240, y: 40 },
+        { id: 't', label: 'T', x: 120, y: 100, parent: 'e' },
+        { id: 'ep', label: "E'", x: 340, y: 100, parent: 'e' },
+        { id: 'plus', label: '+', x: 260, y: 160, parent: 'ep' },
+        { id: 't2', label: 'T', x: 340, y: 160, parent: 'ep' },
+        { id: 'ep2', label: "E'", x: 420, y: 160, parent: 'ep' },
+        { id: 'f2', label: 'F', x: 300, y: 220, parent: 't2' },
+        { id: 'tp2', label: "T'", x: 380, y: 220, parent: 't2', hasInh: true }
+      ],
+      attrs: [
+        { node: 'f2', attr: 'F.ptr = leaf(3)', type: 'syn' },
+        { node: 'tp2', attr: "T'.inh = leaf(3)", type: 'inh' }
+      ],
+      action: "Match 3",
+      rule: "F.ptr = makeLeaf(3); T'.inh = F.ptr"
+    },
+    {
+      desc: "T' → * F T': Match '*', parse F (gives 2)",
+      tree: [
+        { id: 'e', label: 'E', x: 240, y: 40 },
+        { id: 't', label: 'T', x: 120, y: 100, parent: 'e' },
+        { id: 'ep', label: "E'", x: 340, y: 100, parent: 'e' },
+        { id: 't2', label: 'T', x: 340, y: 160, parent: 'ep' },
+        { id: 'tp2', label: "T'", x: 380, y: 220, parent: 't2', hasInh: true },
+        { id: 'mult', label: '*', x: 340, y: 280, parent: 'tp2' },
+        { id: 'f3', label: 'F', x: 400, y: 280, parent: 'tp2' },
+        { id: 'tp3', label: "T'", x: 460, y: 280, parent: 'tp2', hasInh: true }
+      ],
+      attrs: [
+        { node: 'tp2', attr: "T'.inh = leaf(3)", type: 'inh' },
+        { node: 'f3', attr: "F.ptr = leaf(2)", type: 'syn' }
+      ],
+      action: "Match *, Match 2",
+      rule: "T' → * F T'₁"
+    },
+    {
+      desc: "Create '*' node: T'₁.inh = makeNode('*', T'.inh, F.ptr)",
+      tree: [
+        { id: 'e', label: 'E', x: 240, y: 40 },
+        { id: 't', label: 'T', x: 120, y: 100, parent: 'e' },
+        { id: 'ep', label: "E'", x: 340, y: 100, parent: 'e' },
+        { id: 't2', label: 'T', x: 340, y: 160, parent: 'ep' },
+        { id: 'tp2', label: "T'", x: 380, y: 220, parent: 't2' }
+      ],
+      attrs: [
+        { node: 'tp3', attr: "T'₁.inh = makeNode('*', leaf(3), leaf(2))", type: 'inh' }
+      ],
+      action: "Create * node",
+      rule: "T'₁.inh = makeNode('*', T'.inh, F.ptr)",
+      highlight: true
+    },
+    {
+      desc: "T'₁ → ε, propagate up: T.ptr points to (* 3 2)",
+      tree: [
+        { id: 'e', label: 'E', x: 240, y: 40 },
+        { id: 't', label: 'T', x: 120, y: 100, parent: 'e' },
+        { id: 'ep', label: "E'", x: 340, y: 100, parent: 'e' },
+        { id: 't2', label: 'T', x: 340, y: 160, parent: 'ep', hasSyn: true }
+      ],
+      attrs: [
+        { node: 't2', attr: "T.ptr = (* 3 2)", type: 'syn' }
+      ],
+      action: "T' → ε",
+      rule: "T'.syn = T'.inh; T.ptr = T'.syn"
+    },
+    {
+      desc: "Create '+' node: E'₁.inh = makeNode('+', E'.inh, T.ptr)",
+      tree: [
+        { id: 'e', label: 'E', x: 240, y: 40 },
+        { id: 'ep', label: "E'", x: 340, y: 100, parent: 'e' },
+        { id: 'ep2', label: "E'", x: 400, y: 160, parent: 'ep', hasInh: true }
+      ],
+      attrs: [
+        { node: 'ep', attr: "E'.inh = leaf(1)", type: 'inh' },
+        { node: 'ep2', attr: "E'₁.inh = makeNode('+', leaf(1), (* 3 2))", type: 'inh' }
+      ],
+      action: "Create + node",
+      rule: "E'₁.inh = makeNode('+', E'.inh, T.ptr)"
+    },
+    {
+      desc: "E'₁ → ε, propagate up: Final AST complete!",
+      tree: [
+        { id: 'plus', label: '+', x: 240, y: 60 },
+        { id: 'n1', label: '1', x: 160, y: 140, parent: 'plus' },
+        { id: 'mult', label: '*', x: 320, y: 140, parent: 'plus' },
+        { id: 'n3', label: '3', x: 260, y: 220, parent: 'mult' },
+        { id: 'n2', label: '2', x: 380, y: 220, parent: 'mult' }
+      ],
+      attrs: [
+        { node: 'e', attr: "E.ptr = (+ 1 (* 3 2))", type: 'syn' }
+      ],
+      action: "Complete!",
+      rule: "E'.syn = E'.inh; E.ptr = E'.syn"
+    }
+  ];
+
+  const current = steps[step];
+
+  const buildParentLookup = (nodes) => {
+    const lookup = {};
+    nodes.forEach(n => {
+      if (n.parent) {
+        const parent = nodes.find(p => p.id === n.parent);
+        if (parent) lookup[n.id] = { x: parent.x, y: parent.y };
+      }
+    });
+    return lookup;
+  };
+
+  const parentLookup = buildParentLookup(current.tree);
+
+  return (
+    <div className="bg-slate-800 rounded-xl p-4 mt-4">
+      <div className="text-emerald-400 text-base mb-4 font-mono">
+        L-Attributed Grammar: Top-Down AST Construction for 1 + 3 * 2
+      </div>
+
+      {/* Grammar reference */}
+      <div className="bg-slate-900 p-3 rounded-lg mb-4 text-sm">
+        <div className="text-slate-400 mb-1">Key Rules (LL grammar with inherited ↓ and synthesized ↑ attributes):</div>
+        <div className="font-mono text-xs grid grid-cols-1 gap-1">
+          <div className="text-purple-400">E → T E' {"{"} E'.inh = T.ptr; E.ptr = E'.syn {"}"}</div>
+          <div className="text-purple-400">E' → + T E'₁ {"{"} E'₁.inh = makeNode('+', E'.inh, T.ptr); E'.syn = E'₁.syn {"}"}</div>
+          <div className="text-blue-400">E' → ε {"{"} E'.syn = E'.inh {"}"}</div>
+          <div className="text-purple-400">T → F T' {"{"} T'.inh = F.ptr; T.ptr = T'.syn {"}"}</div>
+          <div className="text-purple-400">T' → * F T'₁ {"{"} T'₁.inh = makeNode('*', T'.inh, F.ptr); T'.syn = T'₁.syn {"}"}</div>
+          <div className="text-blue-400">T' → ε {"{"} T'.syn = T'.inh {"}"}</div>
+        </div>
+        <div className="flex gap-4 mt-2 text-xs">
+          <span className="text-purple-400">↓ = inherited (from parent/left sibling)</span>
+          <span className="text-blue-400">↑ = synthesized (from children)</span>
+        </div>
+      </div>
+
+      {/* Tree visualization */}
+      <div className="bg-slate-900 rounded-lg p-4 mb-4">
+        <div className="text-slate-400 text-sm mb-2">Parse Tree / AST (built top-down with attribute flow):</div>
+        <svg width="100%" height="280" viewBox="0 0 500 280">
+          {current.tree.length === 0 ? (
+            <text x="250" y="140" textAnchor="middle" fill="#64748b" fontSize={14}>
+              Click "Next" to start building the tree
+            </text>
+          ) : (
+            current.tree.map(node => (
+              <TreeNodeSVG
+                key={node.id}
+                label={node.label}
+                x={node.x}
+                y={node.y}
+                parentX={parentLookup[node.id]?.x}
+                parentY={parentLookup[node.id]?.y}
+                highlight={step === steps.length - 1 || current.highlight}
+                isNew={node.id === current.newNode}
+                hasInh={node.hasInh}
+                hasSyn={node.hasSyn}
+              />
+            ))
+          )}
+        </svg>
+      </div>
+
+      {/* Attribute values */}
+      {current.attrs.length > 0 && (
+        <div className="bg-slate-900 p-3 rounded-lg mb-4">
+          <div className="text-slate-400 text-xs mb-1">Current Attributes:</div>
+          {current.attrs.map((a, i) => (
+            <div key={i} className={`font-mono text-sm ${a.type === 'inh' ? 'text-purple-400' : 'text-blue-400'}`}>
+              {a.type === 'inh' ? '↓ ' : '↑ '}{a.attr}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Current rule */}
+      <div className="bg-emerald-500/20 border border-emerald-500 p-3 rounded-lg mb-4">
+        <div className="text-slate-400 text-xs">{current.action}</div>
+        <div className="text-emerald-400 font-mono text-sm">{current.rule}</div>
+      </div>
+
+      {/* Description */}
+      <div className="bg-slate-900 p-4 rounded-lg mb-4">
+        <span className="text-slate-500 text-sm">Step {step + 1}/{steps.length}: </span>
+        <span className="text-white text-sm">{current.desc}</span>
+      </div>
+
+      {/* Final result */}
+      {step === steps.length - 1 && (
+        <div className="bg-emerald-500/20 border-2 border-emerald-500 p-4 rounded-lg mb-4 text-center">
+          <div className="text-emerald-400 text-xl font-bold">Final AST Complete!</div>
+          <div className="text-slate-300 text-sm mt-1">
+            L-Attributed: Inherited attrs flowed DOWN, synthesized flowed UP, all evaluated left-to-right
+          </div>
+        </div>
+      )}
+
+      {/* Controls */}
+      <div className="flex gap-2 justify-center">
+        <button onClick={() => setStep(0)} className="px-4 py-2 bg-slate-700 rounded hover:bg-slate-600">
+          ⏮ Start
+        </button>
+        <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0}
+          className="px-5 py-2 bg-slate-700 rounded disabled:opacity-50 hover:bg-slate-600">
+          ← Prev
+        </button>
+        <button onClick={() => setStep(Math.min(steps.length - 1, step + 1))} disabled={step >= steps.length - 1}
+          className="px-5 py-2 bg-slate-700 rounded disabled:opacity-50 hover:bg-slate-600">
+          Next →
+        </button>
+        <button onClick={() => setStep(steps.length - 1)} className="px-4 py-2 bg-emerald-600 rounded hover:bg-emerald-500">
+          ⏭ End
+        </button>
+      </div>
+
+      {/* Progress dots */}
+      <div className="flex gap-1 justify-center mt-4 flex-wrap">
+        {steps.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setStep(i)}
+            className={`w-2 h-2 rounded-full transition-all ${
+              i === step ? 'bg-emerald-500 w-4' : i < step ? 'bg-emerald-500/50' : 'bg-slate-600'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const SymbolTableDemo = () => {
   const [step, setStep] = useState(0);
   
@@ -1528,6 +2307,16 @@ const InteractiveSlide = ({ slide }) => (
   <div className="h-full p-8 overflow-auto">
     <h2 className="text-5xl font-bold text-white mb-4">{slide.title}</h2>
     {slide.content.description && <p className="text-slate-300 mb-4">{slide.content.description}</p>}
+    {slide.content.grammar && (
+      <div className="bg-slate-900 p-4 rounded-lg mb-4">
+        <div className="text-slate-400 text-sm mb-2">Grammar with Semantic Actions:</div>
+        <div className="font-mono text-sm">
+          {slide.content.grammar.map((rule, i) => (
+            <div key={i} className="text-emerald-400 py-1">{rule}</div>
+          ))}
+        </div>
+      </div>
+    )}
     {slide.content.expression && (
       <div className="bg-slate-900 p-6 rounded-lg mb-4 text-center">
         <span className="text-2xl font-mono text-emerald-400">{slide.content.expression}</span>
@@ -1540,6 +2329,8 @@ const InteractiveSlide = ({ slide }) => (
     {slide.interactive?.type === 'ast-vs-parse' && <ASTvsParseTree />}
     {slide.interactive?.type === 'attribute-stack' && <AttributeStackDemo />}
     {slide.interactive?.type === 'ast-construction' && <ASTConstructionDemo />}
+    {slide.interactive?.type === 's-attributed-tree' && <SAttributedTreeDemo />}
+    {slide.interactive?.type === 'l-attributed-tree' && <LAttributedTreeDemo />}
   </div>
 );
 
