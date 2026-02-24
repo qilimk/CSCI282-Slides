@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L-Attributed Grammar — Top-Down Left-to-Right Construction</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f1a; --panel: #131525; --border: #1f2340;
+    --accent: #5b8af5; --accent2: #f5a623; --green: #3dd68c;
+    --inh: #e05aaa; --syn: #3dd68c; --text: #e2e8f0; --muted: #64748b;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Sora',sans-serif; min-height:100vh; overflow-x:hidden; }
+
+  header { padding:28px 40px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:20px; background:linear-gradient(135deg,#0d0f1a 0%,#1a1030 100%); }
+  .header-badge { background:var(--inh); color:#fff; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; padding:4px 10px; border-radius:4px; letter-spacing:.1em; text-transform:uppercase; }
+  header h1 { font-size:22px; font-weight:700; letter-spacing:-.02em; }
+  header h1 span { color:var(--inh); }
+  .header-sub { margin-left:auto; font-size:12px; color:var(--muted); font-family:'JetBrains Mono',monospace; }
+
+  .container { display:grid; grid-template-columns:300px 1fr 280px; gap:0; height:calc(100vh - 85px); }
+
+  .panel-left { border-right:1px solid var(--border); padding:24px 20px; overflow-y:auto; background:var(--panel); }
+  .panel-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+  .panel-title::before { content:''; display:block; width:3px; height:14px; background:var(--inh); border-radius:2px; }
+
+  .grammar-table { width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:11px; }
+  .grammar-table th { color:var(--muted); font-size:10px; text-transform:uppercase; padding:6px 8px; text-align:left; border-bottom:1px solid var(--border); }
+  .grammar-table td { padding:7px 8px; border-bottom:1px solid rgba(31,35,64,.5); vertical-align:top; line-height:1.7; }
+  .grammar-table tr { transition:background .3s; }
+  .grammar-table tr.active-rule td { background:rgba(224,90,170,.12); }
+  .grammar-table tr.active-rule td:first-child { border-left:2px solid var(--inh); }
+  .prod { color:var(--accent); }
+  .sem-inh { color:var(--inh); font-size:10px; }
+  .sem-syn { color:var(--syn); font-size:10px; }
+  .rule-num { color:var(--muted); font-size:10px; }
+  .attr-pill { display:inline-block; padding:1px 6px; border-radius:3px; font-size:9px; font-weight:700; letter-spacing:.05em; vertical-align:middle; margin-left:2px; }
+  .inh-pill { background:rgba(224,90,170,.2); color:var(--inh); border:1px solid rgba(224,90,170,.3); }
+  .syn-pill { background:rgba(61,214,140,.2); color:var(--syn); border:1px solid rgba(61,214,140,.3); }
+
+  .panel-center { display:flex; flex-direction:column; overflow:hidden; }
+  .input-bar { display:flex; align-items:center; gap:12px; padding:14px 24px; border-bottom:1px solid var(--border); background:var(--panel); }
+  .input-bar label { font-size:12px; color:var(--muted); font-family:'JetBrains Mono',monospace; white-space:nowrap; }
+  .input-bar select { background:var(--bg); border:1px solid var(--border); color:var(--text); padding:7px 12px; border-radius:6px; font-family:'JetBrains Mono',monospace; font-size:13px; outline:none; transition:border-color .2s; }
+  .input-bar select:focus { border-color:var(--inh); }
+  .btn { background:var(--inh); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-family:'Sora',sans-serif; font-size:13px; font-weight:600; transition:background .2s,transform .1s; }
+  .btn:hover { background:#c84d99; }
+  .btn:active { transform:scale(.97); }
+  .btn-outline { background:transparent; border:1px solid var(--border); color:var(--text); padding:8px 16px; border-radius:6px; cursor:pointer; font-family:'Sora',sans-serif; font-size:13px; transition:border-color .2s; }
+  .btn-outline:hover { border-color:var(--inh); color:var(--inh); }
+
+  .legend { display:flex; gap:14px; padding:8px 24px; border-bottom:1px solid var(--border); font-size:10px; font-family:'JetBrains Mono',monospace; flex-wrap:wrap; align-items:center; }
+  .legend-item { display:flex; align-items:center; gap:5px; color:var(--muted); }
+  .legend-dot { width:10px; height:10px; border-radius:2px; }
+  .legend-line { width:20px; height:2px; border-radius:1px; }
+
+  #treeCanvas { flex:1; display:block; }
+
+  .traversal-bar { display:flex; align-items:center; gap:8px; padding:10px 24px; border-top:1px solid var(--border); background:var(--panel); font-family:'JetBrains Mono',monospace; font-size:12px; overflow-x:auto; min-height:46px; }
+  .trav-label { color:var(--muted); white-space:nowrap; }
+  .trav-item { display:inline-flex; align-items:center; gap:4px; background:#1e2440; border:1px solid var(--border); border-radius:5px; padding:3px 9px; font-size:11px; white-space:nowrap; transition:all .3s; }
+  .trav-item.current-node { background:rgba(224,90,170,.2); border-color:var(--inh); }
+  .trav-item.visited { background:rgba(61,214,140,.08); border-color:rgba(61,214,140,.3); opacity:.7; }
+  .trav-item .tsym { color:var(--text); }
+
+  .panel-right { border-left:1px solid var(--border); background:var(--panel); display:flex; flex-direction:column; overflow:hidden; }
+  .steps-log { flex:1; overflow-y:auto; padding:16px; }
+  .step-entry { padding:10px 12px; border-radius:8px; margin-bottom:8px; border:1px solid transparent; font-size:12px; line-height:1.6; opacity:.5; transition:all .3s; }
+  .step-entry.past { opacity:.4; }
+  .step-entry.current { opacity:1; background:rgba(224,90,170,.08); border-color:var(--inh); }
+  .step-entry.future { opacity:.25; }
+  .step-num { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); margin-bottom:4px; }
+  .step-action { font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
+  .step-action.visit   { color:var(--accent); }
+  .step-action.inherit { color:var(--inh); }
+  .step-action.synth   { color:var(--syn); }
+  .step-action.accept  { color:var(--green); }
+  .step-inh { color:var(--inh); font-family:'JetBrains Mono',monospace; font-size:11px; margin-top:2px; }
+  .step-syn { color:var(--syn); font-family:'JetBrains Mono',monospace; font-size:11px; margin-top:2px; }
+
+  .explanation { margin:0 16px; padding:12px 14px; background:var(--bg); border-radius:8px; border:1px solid var(--border); font-size:11px; line-height:1.6; color:var(--muted); }
+  .explanation strong { color:var(--text); }
+  .controls { display:flex; justify-content:center; gap:10px; padding:14px; border-top:1px solid var(--border); }
+
+  #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--inh); color:#fff; padding:10px 20px; border-radius:8px; font-weight:700; font-size:14px; opacity:0; transition:all .4s; pointer-events:none; z-index:100; }
+  #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-badge">CSCI 282</div>
+  <h1>L-Attributed Grammar <span>&rarr;</span> Top-Down Left-to-Right Construction</h1>
+  <div class="header-sub">Slide 16 Visualizer</div>
+</header>
+
+<div class="container">
+
+  <!-- LEFT PANEL -->
+  <div class="panel-left">
+    <div class="panel-title">Grammar &amp; Semantic Rules</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.8;">
+      Builds an <strong style="color:var(--accent)">AST</strong> for arithmetic expressions.
+      <span class="attr-pill inh-pill">INHERITED</span> <code style="color:var(--inh)">.inh</code> carries a partial tree node <em>down</em>.
+      <span class="attr-pill syn-pill">SYNTHESIZED</span> <code style="color:var(--syn)">.syn/.ptr</code> returns the completed subtree <em>up</em>.
+    </div>
+    <table class="grammar-table" id="grammarTable">
+      <thead><tr><th>#</th><th>Production</th><th>Semantic Rules</th></tr></thead>
+      <tbody>
+        <tr id="rule-1">
+          <td class="rule-num">1</td>
+          <td class="prod">E &rarr; T E&prime;</td>
+          <td><div class="sem-inh">E&prime;.inh = T.ptr</div><div class="sem-syn">E.ptr = E&prime;.syn</div></td>
+        </tr>
+        <tr id="rule-2">
+          <td class="rule-num">2</td>
+          <td class="prod">E&prime; &rarr; + T E&prime;<sub>1</sub></td>
+          <td><div class="sem-inh">E&prime;<sub>1</sub>.inh = makeNode(+, E&prime;.inh, T.ptr)</div><div class="sem-syn">E&prime;.syn = E&prime;<sub>1</sub>.syn</div></td>
+        </tr>
+        <tr id="rule-3">
+          <td class="rule-num">3</td>
+          <td class="prod">E&prime; &rarr; &epsilon;</td>
+          <td><div class="sem-syn">E&prime;.syn = E&prime;.inh</div><div style="color:var(--muted);font-size:9px;">Pass ptr straight up</div></td>
+        </tr>
+        <tr id="rule-4">
+          <td class="rule-num">4</td>
+          <td class="prod">T &rarr; F T&prime;</td>
+          <td><div class="sem-inh">T&prime;.inh = F.ptr</div><div class="sem-syn">T.ptr = T&prime;.syn</div></td>
+        </tr>
+        <tr id="rule-5">
+          <td class="rule-num">5</td>
+          <td class="prod">T&prime; &rarr; * F T&prime;<sub>1</sub></td>
+          <td><div class="sem-inh">T&prime;<sub>1</sub>.inh = makeNode(*, T&prime;.inh, F.ptr)</div><div class="sem-syn">T&prime;.syn = T&prime;<sub>1</sub>.syn</div></td>
+        </tr>
+        <tr id="rule-6">
+          <td class="rule-num">6</td>
+          <td class="prod">T&prime; &rarr; &epsilon;</td>
+          <td><div class="sem-syn">T&prime;.syn = T&prime;.inh</div></td>
+        </tr>
+        <tr id="rule-7">
+          <td class="rule-num">7</td>
+          <td class="prod">F &rarr; const</td>
+          <td><div class="sem-syn">F.ptr = makeLeaf(val)</div><div style="color:var(--muted);font-size:9px;">Creates a leaf node</div></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:18px;">
+      <div class="panel-title">Key Concept</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.8;">
+        <strong style="color:var(--inh)">L-Attributed</strong>: each <code style="color:var(--inh)">.inh</code> depends only on the <em>parent</em> or <em>left siblings</em>.<br><br>
+        E&prime; and T&prime; carry a <strong style="color:var(--text)">partial AST node</strong> downward via .inh. When they hit &epsilon;, they return it via <code style="color:var(--syn)">.syn</code> &mdash; building the tree in one top-down pass.
+      </div>
+    </div>
+
+    <div style="margin-top:18px;">
+      <div class="panel-title">Node Functions</div>
+      <div style="font-size:11px;color:var(--muted);line-height:2;font-family:'JetBrains Mono',monospace;">
+        <span style="color:var(--syn)">makeLeaf(v)</span> &rarr; leaf node<br>
+        <span style="color:var(--syn)">makeNode(op,l,r)</span> &rarr; interior node
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="panel-center">
+    <div class="input-bar">
+      <label>Expression:</label>
+      <select id="exprSelect">
+        <option value="e1" selected>3 + 4</option>
+        <option value="e2">3 * 4</option>
+        <option value="e3">3 + 4 * 5</option>
+        <option value="e4">3 * 4 + 5</option>
+        <option value="e5">3 + 4 + 5</option>
+      </select>
+      <button class="btn" onclick="initExpression()">&#9654; Load</button>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#2a1a35;border:1px solid var(--inh);"></div>Receiving .inh</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#1a3a2a;border:1px solid var(--syn);"></div>Done / .syn ready</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3a2a10;border:1px solid var(--accent2);"></div>Terminal</div>
+      <div class="legend-item"><div class="legend-line" style="background:var(--inh);"></div>inh &#x2193;</div>
+      <div class="legend-item"><div class="legend-line" style="background:var(--syn);"></div>syn &#x2191;</div>
+      <div class="legend-item" style="margin-left:auto;color:var(--inh);font-size:10px;">&#x2193; top-down &nbsp;&bull;&nbsp; left&#x2192;right</div>
+    </div>
+
+    <canvas id="treeCanvas"></canvas>
+
+    <div class="traversal-bar">
+      <span class="trav-label">TRAVERSAL:</span>
+      <div id="travDisplay" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel-right">
+    <div style="padding:16px 16px 8px;">
+      <div class="panel-title">Evaluation Steps</div>
+    </div>
+    <div class="explanation" id="currentExplanation">
+      Select an expression and click <strong>Load</strong> to begin the top-down left-to-right traversal.
+    </div>
+    <div style="height:12px;"></div>
+    <div class="steps-log" id="stepsLog"></div>
+    <div class="controls">
+      <button class="btn-outline" onclick="prevStep()" style="font-size:12px;">&#8592; Back</button>
+      <span id="stepCounter" style="font-size:12px;color:var(--muted);align-self:center;">Step 0 / 0</span>
+      <button class="btn" onclick="nextStep()" style="font-size:12px;">Next &#8594;</button>
+      <button class="btn-outline" onclick="autoPlay()" style="font-size:12px;">&#9205; Auto</button>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast">&#10003; Traversal complete &mdash; AST fully constructed!</div>
+
+<script>
+
+// ─── AST node helpers ─────────────────────────────────────────────────────────
+let nodeCounter = 0;
+function makeLeaf(val) { return { id: 'n'+(++nodeCounter), op: null, val, left:null, right:null }; }
+function makeNode(op, left, right) { return { id: 'n'+(++nodeCounter), op, val:null, left, right }; }
+function ptrLabel(p) {
+  if (!p) return 'null';
+  if (p.op === null) return 'leaf('+p.val+')';
+  return 'node('+p.op+','+ptrLabel(p.left)+','+ptrLabel(p.right)+')';
+}
+function ptrShort(p) {
+  if (!p) return '∅';
+  if (p.op === null) return String(p.val);
+  return '('+ptrShort(p.left)+p.op+ptrShort(p.right)+')';
+}
+
+// ─── Parse-tree node factory ──────────────────────────────────────────────────
+// sym: display symbol, isTerminal, children[], plus per-step attrs set externally
+function PN(id, sym, isTerminal, children) {
+  return { id, sym, isTerminal, children, parent:null,
+           x:0, y:0, px:0, py:0, depth:0 };
+}
+function linkParents(n) { n.children.forEach(c => { c.parent = n; linkParents(c); }); }
+
+// ─── Tree builders ────────────────────────────────────────────────────────────
+// Each returns the root PN node of the parse tree.
+
+// 3 + 4  →  parse tree:
+//   E
+//   ├─ T
+//   │  ├─ F → const(3)
+//   │  └─ T' → ε
+//   └─ E'
+//      ├─ +
+//      ├─ T
+//      │  ├─ F → const(4)
+//      │  └─ T' → ε
+//      └─ E'₁ → ε
+function tree_e1() {
+  const F1  = PN('F1',  'F',   false, [PN('c3','3',true,[])]);
+  const Tp1 = PN('Tp1', "T'",  false, [PN('ep1','ε',true,[])]);
+  const T1  = PN('T1',  'T',   false, [F1, Tp1]);
+  const F2  = PN('F2',  'F',   false, [PN('c4','4',true,[])]);
+  const Tp2 = PN('Tp2', "T'",  false, [PN('ep2','ε',true,[])]);
+  const T2  = PN('T2',  'T',   false, [F2, Tp2]);
+  const Ep2 = PN('Ep2', "E'",  false, [PN('ep3','ε',true,[])]);
+  const Ep1 = PN('Ep1', "E'",  false, [PN('plus','+',true,[]), T2, Ep2]);
+  const E   = PN('E',   'E',   false, [T1, Ep1]);
+  linkParents(E); return E;
+}
+
+// 3 * 4
+function tree_e2() {
+  const F1  = PN('F1',  'F',   false, [PN('c3','3',true,[])]);
+  const F2  = PN('F2',  'F',   false, [PN('c4','4',true,[])]);
+  const Tp2 = PN('Tp2', "T'",  false, [PN('ep1','ε',true,[])]);
+  const Tp1 = PN('Tp1', "T'",  false, [PN('star','*',true,[]), F2, Tp2]);
+  const T1  = PN('T1',  'T',   false, [F1, Tp1]);
+  const Ep1 = PN('Ep1', "E'",  false, [PN('ep2','ε',true,[])]);
+  const E   = PN('E',   'E',   false, [T1, Ep1]);
+  linkParents(E); return E;
+}
+
+// 3 + 4 * 5
+function tree_e3() {
+  const F1  = PN('F1',  'F',   false, [PN('c3','3',true,[])]);
+  const Tp1 = PN('Tp1', "T'",  false, [PN('ep1','ε',true,[])]);
+  const T1  = PN('T1',  'T',   false, [F1, Tp1]);
+  const F2  = PN('F2',  'F',   false, [PN('c4','4',true,[])]);
+  const F3  = PN('F3',  'F',   false, [PN('c5','5',true,[])]);
+  const Tp3 = PN('Tp3', "T'",  false, [PN('ep2','ε',true,[])]);
+  const Tp2 = PN('Tp2', "T'",  false, [PN('star','*',true,[]), F3, Tp3]);
+  const T2  = PN('T2',  'T',   false, [F2, Tp2]);
+  const Ep2 = PN('Ep2', "E'",  false, [PN('ep3','ε',true,[])]);
+  const Ep1 = PN('Ep1', "E'",  false, [PN('plus','+',true,[]), T2, Ep2]);
+  const E   = PN('E',   'E',   false, [T1, Ep1]);
+  linkParents(E); return E;
+}
+
+// 3 * 4 + 5
+function tree_e4() {
+  const F1  = PN('F1',  'F',   false, [PN('c3','3',true,[])]);
+  const F2  = PN('F2',  'F',   false, [PN('c4','4',true,[])]);
+  const Tp2 = PN('Tp2', "T'",  false, [PN('ep1','ε',true,[])]);
+  const Tp1 = PN('Tp1', "T'",  false, [PN('star','*',true,[]), F2, Tp2]);
+  const T1  = PN('T1',  'T',   false, [F1, Tp1]);
+  const F3  = PN('F3',  'F',   false, [PN('c5','5',true,[])]);
+  const Tp3 = PN('Tp3', "T'",  false, [PN('ep2','ε',true,[])]);
+  const T2  = PN('T2',  'T',   false, [F3, Tp3]);
+  const Ep2 = PN('Ep2', "E'",  false, [PN('ep3','ε',true,[])]);
+  const Ep1 = PN('Ep1', "E'",  false, [PN('plus','+',true,[]), T2, Ep2]);
+  const E   = PN('E',   'E',   false, [T1, Ep1]);
+  linkParents(E); return E;
+}
+
+// 3 + 4 + 5  (left assoc: (3+4)+5)
+function tree_e5() {
+  const F1  = PN('F1',  'F',   false, [PN('c3','3',true,[])]);
+  const Tp1 = PN('Tp1', "T'",  false, [PN('ep1','ε',true,[])]);
+  const T1  = PN('T1',  'T',   false, [F1, Tp1]);
+  const F2  = PN('F2',  'F',   false, [PN('c4','4',true,[])]);
+  const Tp2 = PN('Tp2', "T'",  false, [PN('ep2','ε',true,[])]);
+  const T2  = PN('T2',  'T',   false, [F2, Tp2]);
+  const F3  = PN('F3',  'F',   false, [PN('c5','5',true,[])]);
+  const Tp3 = PN('Tp3', "T'",  false, [PN('ep3','ε',true,[])]);
+  const T3  = PN('T3',  'T',   false, [F3, Tp3]);
+  const Ep3 = PN('Ep3', "E'",  false, [PN('ep4','ε',true,[])]);
+  const Ep2 = PN('Ep2', "E'",  false, [PN('plus2','+',true,[]), T3, Ep3]);
+  const Ep1 = PN('Ep1', "E'",  false, [PN('plus1','+',true,[]), T2, Ep2]);
+  const E   = PN('E',   'E',   false, [T1, Ep1]);
+  linkParents(E); return E;
+}
+
+// ─── Step builders ────────────────────────────────────────────────────────────
+// Each step: { focus, action, inh:{id:label}, syn:{id:label}, ast:ptrShort, activeRule, exp }
+// inh / syn are display strings for the attribute labels on nodes
+// ast is the final AST shape built so far (shown in traversal bar)
+
+function steps_e1() {
+  // 3 + 4 — builds node(+, leaf(3), leaf(4))
+  let p3, p4, p34, pT1syn, pE;
+  p3   = makeLeaf(3);
+  p4   = makeLeaf(4);
+  p34  = makeNode('+', p3, p4);
+  return [
+    { focus:'E',   action:'visit',   inh:{}, syn:{},         ast:'', activeRule:1,
+      exp:'<strong>Visit E</strong>. Rule 1: first evaluate T (left child) to get T.ptr, then pass T.ptr as E\'.inh.' },
+    { focus:'T1',  action:'visit',   inh:{}, syn:{},         ast:'', activeRule:4,
+      exp:'<strong>Visit T</strong>. Rule 4: evaluate F (left child) to get F.ptr, then pass F.ptr as T\'.inh.' },
+    { focus:'F1',  action:'visit',   inh:{}, syn:{F1:'leaf(3)'}, ast:'leaf(3)', activeRule:7,
+      exp:'<strong>Visit F → const(3)</strong>. Rule 7: <code style="color:var(--syn)">F.ptr = makeLeaf(3)</code>. Creates a leaf node. Synthesized upward to T.' },
+    { focus:'Tp1', action:'inherit', inh:{Tp1:'leaf(3)'}, syn:{}, ast:'leaf(3)', activeRule:4,
+      exp:'<strong>Inherit into T\'</strong>. Rule 4: <code style="color:var(--inh)">T\'.inh = F.ptr = leaf(3)</code>. The partial tree is passed down to T\'.' },
+    { focus:'Tp1', action:'synth',   inh:{}, syn:{Tp1:'leaf(3)'}, ast:'leaf(3)', activeRule:6,
+      exp:'<strong>T\' → ε</strong>. Rule 6: <code style="color:var(--syn)">T\'.syn = T\'.inh = leaf(3)</code>. No multiplication, so just pass the pointer straight back up.' },
+    { focus:'T1',  action:'synth',   inh:{}, syn:{T1:'leaf(3)'}, ast:'leaf(3)', activeRule:4,
+      exp:'<strong>T.ptr = T\'.syn = leaf(3)</strong>. T\'s synthesized attribute is now known. Pass it up to E as E\'.inh.' },
+    { focus:'Ep1', action:'inherit', inh:{Ep1:'leaf(3)'}, syn:{}, ast:'leaf(3)', activeRule:1,
+      exp:'<strong>Inherit into E\'</strong>. Rule 1: <code style="color:var(--inh)">E\'.inh = T.ptr = leaf(3)</code>. This is the partial AST so far — just the left operand.' },
+    { focus:'T2',  action:'visit',   inh:{}, syn:{},         ast:'leaf(3)', activeRule:4,
+      exp:'<strong>Visit T (right side of +)</strong>. Evaluate the right operand next.' },
+    { focus:'F2',  action:'visit',   inh:{}, syn:{F2:'leaf(4)'}, ast:'leaf(4)', activeRule:7,
+      exp:'<strong>Visit F → const(4)</strong>. Rule 7: <code style="color:var(--syn)">F.ptr = makeLeaf(4)</code>.' },
+    { focus:'Tp2', action:'inherit', inh:{Tp2:'leaf(4)'}, syn:{}, ast:'leaf(4)', activeRule:4,
+      exp:'<strong>Inherit into T\'</strong>. Rule 4: <code style="color:var(--inh)">T\'.inh = F.ptr = leaf(4)</code>.' },
+    { focus:'Tp2', action:'synth',   inh:{}, syn:{Tp2:'leaf(4)'}, ast:'leaf(4)', activeRule:6,
+      exp:'<strong>T\' → ε</strong>. Rule 6: <code style="color:var(--syn)">T\'.syn = T\'.inh = leaf(4)</code>. No multiplication.' },
+    { focus:'T2',  action:'synth',   inh:{}, syn:{T2:'leaf(4)'}, ast:'leaf(4)', activeRule:4,
+      exp:'<strong>T.ptr = T\'.syn = leaf(4)</strong>. Right operand is ready.' },
+    { focus:'Ep2', action:'inherit', inh:{Ep2:'(3+4)'}, syn:{}, ast:'(3+4)', activeRule:2,
+      exp:'<strong>Inherit into E\'₁</strong>. Rule 2: <code style="color:var(--inh)">E\'₁.inh = makeNode(\'+\', E\'.inh, T.ptr) = node(+, leaf(3), leaf(4))</code>. The + node is <em>created here</em> and passed down.' },
+    { focus:'Ep2', action:'synth',   inh:{}, syn:{Ep2:'(3+4)'}, ast:'(3+4)', activeRule:3,
+      exp:'<strong>E\'₁ → ε</strong>. Rule 3: <code style="color:var(--syn)">E\'₁.syn = E\'₁.inh = node(+,3,4)</code>. No more additions. Pass the completed node back up.' },
+    { focus:'Ep1', action:'synth',   inh:{}, syn:{Ep1:'(3+4)'}, ast:'(3+4)', activeRule:2,
+      exp:'<strong>E\'.syn = E\'₁.syn = node(+,3,4)</strong>. The + subtree bubbles up.' },
+    { focus:'E',   action:'accept',  inh:{}, syn:{E:'(3+4)'}, ast:'(3+4)', activeRule:1,
+      exp:'<strong>E.ptr = E\'.syn = node(+, leaf(3), leaf(4))</strong>. <strong>Traversal complete!</strong> The final AST is <strong>(3+4)</strong>. L-attributed evaluation built the tree in one top-down left-to-right pass.' },
+  ];
+}
+
+function steps_e2() {
+  // 3 * 4 — builds node(*, leaf(3), leaf(4))
+  return [
+    { focus:'E',   action:'visit',   inh:{}, syn:{},         ast:'', activeRule:1,
+      exp:'<strong>Visit E</strong>. Rule 1: descend into T first.' },
+    { focus:'T1',  action:'visit',   inh:{}, syn:{},         ast:'', activeRule:4,
+      exp:'<strong>Visit T</strong>. Rule 4: evaluate F first to get F.ptr.' },
+    { focus:'F1',  action:'visit',   inh:{}, syn:{F1:'leaf(3)'}, ast:'leaf(3)', activeRule:7,
+      exp:'<strong>Visit F → const(3)</strong>. Rule 7: <code style="color:var(--syn)">F.ptr = makeLeaf(3)</code>.' },
+    { focus:'Tp1', action:'inherit', inh:{Tp1:'leaf(3)'}, syn:{}, ast:'leaf(3)', activeRule:4,
+      exp:'<strong>Inherit into T\'</strong>. Rule 4: <code style="color:var(--inh)">T\'.inh = F.ptr = leaf(3)</code>. Partial tree passed down.' },
+    { focus:'F2',  action:'visit',   inh:{}, syn:{F2:'leaf(4)'}, ast:'leaf(4)', activeRule:7,
+      exp:'<strong>Visit F → const(4)</strong>. Rule 7: <code style="color:var(--syn)">F.ptr = makeLeaf(4)</code>. Right operand of *.' },
+    { focus:'Tp2', action:'inherit', inh:{Tp2:'(3*4)'}, syn:{}, ast:'(3*4)', activeRule:5,
+      exp:'<strong>Inherit into T\'₁</strong>. Rule 5: <code style="color:var(--inh)">T\'₁.inh = makeNode(\'*\', T\'.inh, F.ptr) = node(*, leaf(3), leaf(4))</code>. The * node is built and passed down.' },
+    { focus:'Tp2', action:'synth',   inh:{}, syn:{Tp2:'(3*4)'}, ast:'(3*4)', activeRule:6,
+      exp:'<strong>T\'₁ → ε</strong>. Rule 6: <code style="color:var(--syn)">T\'₁.syn = T\'₁.inh = node(*,3,4)</code>. Pass it back up.' },
+    { focus:'Tp1', action:'synth',   inh:{}, syn:{Tp1:'(3*4)'}, ast:'(3*4)', activeRule:5,
+      exp:'<strong>T\'.syn = T\'₁.syn = node(*,3,4)</strong>. Multiplication subtree complete.' },
+    { focus:'T1',  action:'synth',   inh:{}, syn:{T1:'(3*4)'}, ast:'(3*4)', activeRule:4,
+      exp:'<strong>T.ptr = T\'.syn = node(*,3,4)</strong>. Pass up to E.' },
+    { focus:'Ep1', action:'inherit', inh:{Ep1:'(3*4)'}, syn:{}, ast:'(3*4)', activeRule:1,
+      exp:'<strong>Inherit into E\'</strong>. Rule 1: <code style="color:var(--inh)">E\'.inh = T.ptr = node(*,3,4)</code>.' },
+    { focus:'Ep1', action:'synth',   inh:{}, syn:{Ep1:'(3*4)'}, ast:'(3*4)', activeRule:3,
+      exp:'<strong>E\' → ε</strong>. Rule 3: <code style="color:var(--syn)">E\'.syn = E\'.inh = node(*,3,4)</code>. No addition.' },
+    { focus:'E',   action:'accept',  inh:{}, syn:{E:'(3*4)'}, ast:'(3*4)', activeRule:1,
+      exp:'<strong>E.ptr = E\'.syn = node(*, leaf(3), leaf(4))</strong>. <strong>Done!</strong> AST is <strong>(3*4)</strong>.' },
+  ];
+}
+
+function steps_e3() {
+  // 3 + 4*5 → node(+, leaf(3), node(*, leaf(4), leaf(5)))
+  return [
+    { focus:'E',   action:'visit',   inh:{}, syn:{},          ast:'', activeRule:1,
+      exp:'<strong>Visit E</strong>. Rule 1: evaluate T (the "3" part) first.' },
+    { focus:'T1',  action:'visit',   inh:{}, syn:{},          ast:'', activeRule:4,
+      exp:'<strong>Visit T</strong>. Rule 4: F gives leaf(3), then T\' handles the rest (no *).' },
+    { focus:'F1',  action:'visit',   inh:{}, syn:{F1:'leaf(3)'}, ast:'leaf(3)', activeRule:7,
+      exp:'<strong>Visit F → const(3)</strong>. <code style="color:var(--syn)">F.ptr = makeLeaf(3)</code>.' },
+    { focus:'Tp1', action:'inherit', inh:{Tp1:'leaf(3)'}, syn:{}, ast:'leaf(3)', activeRule:4,
+      exp:'<strong>Inherit into T\'</strong>. <code style="color:var(--inh)">T\'.inh = leaf(3)</code>.' },
+    { focus:'Tp1', action:'synth',   inh:{}, syn:{Tp1:'leaf(3)'}, ast:'leaf(3)', activeRule:6,
+      exp:'<strong>T\' → ε</strong>. Rule 6: <code style="color:var(--syn)">T\'.syn = T\'.inh = leaf(3)</code>. No * after 3.' },
+    { focus:'T1',  action:'synth',   inh:{}, syn:{T1:'leaf(3)'}, ast:'leaf(3)', activeRule:4,
+      exp:'<strong>T.ptr = leaf(3)</strong>. First term done.' },
+    { focus:'Ep1', action:'inherit', inh:{Ep1:'leaf(3)'}, syn:{}, ast:'leaf(3)', activeRule:1,
+      exp:'<strong>Inherit into E\'</strong>. Rule 1: <code style="color:var(--inh)">E\'.inh = T.ptr = leaf(3)</code>. Left operand of + held in E\'.inh.' },
+    { focus:'T2',  action:'visit',   inh:{}, syn:{},          ast:'leaf(3)', activeRule:4,
+      exp:'<strong>Visit T (the "4*5" part)</strong>. This T will build node(*,4,5).' },
+    { focus:'F2',  action:'visit',   inh:{}, syn:{F2:'leaf(4)'}, ast:'leaf(4)', activeRule:7,
+      exp:'<strong>Visit F → const(4)</strong>. <code style="color:var(--syn)">F.ptr = makeLeaf(4)</code>.' },
+    { focus:'Tp2', action:'inherit', inh:{Tp2:'leaf(4)'}, syn:{}, ast:'leaf(4)', activeRule:4,
+      exp:'<strong>Inherit into T\'</strong>. <code style="color:var(--inh)">T\'.inh = leaf(4)</code>.' },
+    { focus:'F3',  action:'visit',   inh:{}, syn:{F3:'leaf(5)'}, ast:'leaf(5)', activeRule:7,
+      exp:'<strong>Visit F → const(5)</strong>. <code style="color:var(--syn)">F.ptr = makeLeaf(5)</code>. Right operand of *.' },
+    { focus:'Tp3', action:'inherit', inh:{Tp3:'(4*5)'}, syn:{}, ast:'(4*5)', activeRule:5,
+      exp:'<strong>Inherit into T\'₁</strong>. Rule 5: <code style="color:var(--inh)">T\'₁.inh = makeNode(\'*\', leaf(4), leaf(5))</code>. * node created and passed down.' },
+    { focus:'Tp3', action:'synth',   inh:{}, syn:{Tp3:'(4*5)'}, ast:'(4*5)', activeRule:6,
+      exp:'<strong>T\'₁ → ε</strong>. Rule 6: <code style="color:var(--syn)">T\'₁.syn = node(*,4,5)</code>.' },
+    { focus:'Tp2', action:'synth',   inh:{}, syn:{Tp2:'(4*5)'}, ast:'(4*5)', activeRule:5,
+      exp:'<strong>T\'.syn = T\'₁.syn = node(*,4,5)</strong>.' },
+    { focus:'T2',  action:'synth',   inh:{}, syn:{T2:'(4*5)'}, ast:'(4*5)', activeRule:4,
+      exp:'<strong>T.ptr = node(*,4,5)</strong>. Second term complete.' },
+    { focus:'Ep2', action:'inherit', inh:{Ep2:'(3+(4*5))'}, syn:{}, ast:'(3+(4*5))', activeRule:2,
+      exp:'<strong>Inherit into E\'₁</strong>. Rule 2: <code style="color:var(--inh)">E\'₁.inh = makeNode(\'+\', leaf(3), node(*,4,5))</code>. The full + node is assembled!' },
+    { focus:'Ep2', action:'synth',   inh:{}, syn:{Ep2:'(3+(4*5))'}, ast:'(3+(4*5))', activeRule:3,
+      exp:'<strong>E\'₁ → ε</strong>. Rule 3: <code style="color:var(--syn)">E\'₁.syn = E\'₁.inh</code>. Return the completed AST.' },
+    { focus:'Ep1', action:'synth',   inh:{}, syn:{Ep1:'(3+(4*5))'}, ast:'(3+(4*5))', activeRule:2,
+      exp:'<strong>E\'.syn = E\'₁.syn = node(+, 3, node(*,4,5))</strong>.' },
+    { focus:'E',   action:'accept',  inh:{}, syn:{E:'(3+(4*5))'}, ast:'(3+(4*5))', activeRule:1,
+      exp:'<strong>E.ptr = node(+, leaf(3), node(*, leaf(4), leaf(5)))</strong>. <strong>Done!</strong> AST correctly captures 3 + (4*5) with operator precedence enforced by the grammar structure.' },
+  ];
+}
+
+function steps_e4() {
+  // 3*4 + 5 → node(+, node(*,3,4), leaf(5))
+  return [
+    { focus:'E',   action:'visit',   inh:{}, syn:{},          ast:'', activeRule:1,
+      exp:'<strong>Visit E</strong>. Rule 1: evaluate T ("3*4") first.' },
+    { focus:'T1',  action:'visit',   inh:{}, syn:{},          ast:'', activeRule:4,
+      exp:'<strong>Visit T</strong>. Rule 4: F gives leaf(3), T\' handles the *4 part.' },
+    { focus:'F1',  action:'visit',   inh:{}, syn:{F1:'leaf(3)'}, ast:'leaf(3)', activeRule:7,
+      exp:'<strong>Visit F → const(3)</strong>. <code style="color:var(--syn)">F.ptr = makeLeaf(3)</code>.' },
+    { focus:'Tp1', action:'inherit', inh:{Tp1:'leaf(3)'}, syn:{}, ast:'leaf(3)', activeRule:4,
+      exp:'<strong>Inherit into T\'</strong>. <code style="color:var(--inh)">T\'.inh = leaf(3)</code>.' },
+    { focus:'F2',  action:'visit',   inh:{}, syn:{F2:'leaf(4)'}, ast:'leaf(4)', activeRule:7,
+      exp:'<strong>Visit F → const(4)</strong>. <code style="color:var(--syn)">F.ptr = makeLeaf(4)</code>.' },
+    { focus:'Tp2', action:'inherit', inh:{Tp2:'(3*4)'}, syn:{}, ast:'(3*4)', activeRule:5,
+      exp:'<strong>Inherit into T\'₁</strong>. Rule 5: <code style="color:var(--inh)">T\'₁.inh = makeNode(\'*\', leaf(3), leaf(4))</code>. * node built and passed down.' },
+    { focus:'Tp2', action:'synth',   inh:{}, syn:{Tp2:'(3*4)'}, ast:'(3*4)', activeRule:6,
+      exp:'<strong>T\'₁ → ε</strong>. <code style="color:var(--syn)">T\'₁.syn = node(*,3,4)</code>.' },
+    { focus:'Tp1', action:'synth',   inh:{}, syn:{Tp1:'(3*4)'}, ast:'(3*4)', activeRule:5,
+      exp:'<strong>T\'.syn = node(*,3,4)</strong>.' },
+    { focus:'T1',  action:'synth',   inh:{}, syn:{T1:'(3*4)'}, ast:'(3*4)', activeRule:4,
+      exp:'<strong>T.ptr = node(*,3,4)</strong>. First term complete.' },
+    { focus:'Ep1', action:'inherit', inh:{Ep1:'(3*4)'}, syn:{}, ast:'(3*4)', activeRule:1,
+      exp:'<strong>Inherit into E\'</strong>. Rule 1: <code style="color:var(--inh)">E\'.inh = T.ptr = node(*,3,4)</code>. Left side of + is the multiplication subtree.' },
+    { focus:'T2',  action:'visit',   inh:{}, syn:{},          ast:'(3*4)', activeRule:4,
+      exp:'<strong>Visit T (the "5" part)</strong>.' },
+    { focus:'F3',  action:'visit',   inh:{}, syn:{F3:'leaf(5)'}, ast:'leaf(5)', activeRule:7,
+      exp:'<strong>Visit F → const(5)</strong>. <code style="color:var(--syn)">F.ptr = makeLeaf(5)</code>.' },
+    { focus:'Tp3', action:'inherit', inh:{Tp3:'leaf(5)'}, syn:{}, ast:'leaf(5)', activeRule:4,
+      exp:'<strong>Inherit into T\'</strong>. <code style="color:var(--inh)">T\'.inh = leaf(5)</code>.' },
+    { focus:'Tp3', action:'synth',   inh:{}, syn:{Tp3:'leaf(5)'}, ast:'leaf(5)', activeRule:6,
+      exp:'<strong>T\' → ε</strong>. <code style="color:var(--syn)">T\'.syn = leaf(5)</code>.' },
+    { focus:'T2',  action:'synth',   inh:{}, syn:{T2:'leaf(5)'}, ast:'leaf(5)', activeRule:4,
+      exp:'<strong>T.ptr = leaf(5)</strong>.' },
+    { focus:'Ep2', action:'inherit', inh:{Ep2:'((3*4)+5)'}, syn:{}, ast:'((3*4)+5)', activeRule:2,
+      exp:'<strong>Inherit into E\'₁</strong>. Rule 2: <code style="color:var(--inh)">E\'₁.inh = makeNode(\'+\', node(*,3,4), leaf(5))</code>. The full tree assembled.' },
+    { focus:'Ep2', action:'synth',   inh:{}, syn:{Ep2:'((3*4)+5)'}, ast:'((3*4)+5)', activeRule:3,
+      exp:'<strong>E\'₁ → ε</strong>. <code style="color:var(--syn)">E\'₁.syn = node(+, node(*,3,4), leaf(5))</code>.' },
+    { focus:'Ep1', action:'synth',   inh:{}, syn:{Ep1:'((3*4)+5)'}, ast:'((3*4)+5)', activeRule:2,
+      exp:'<strong>E\'.syn = E\'₁.syn</strong>.' },
+    { focus:'E',   action:'accept',  inh:{}, syn:{E:'((3*4)+5)'}, ast:'((3*4)+5)', activeRule:1,
+      exp:'<strong>E.ptr = node(+, node(*,3,4), leaf(5))</strong>. <strong>Done!</strong> AST is <strong>(3*4)+5</strong>.' },
+  ];
+}
+
+function steps_e5() {
+  // 3 + 4 + 5 → left-associative: node(+, node(+,3,4), leaf(5))
+  return [
+    { focus:'E',   action:'visit',   inh:{}, syn:{},         ast:'', activeRule:1,
+      exp:'<strong>Visit E</strong>. Parse <code>3 + 4 + 5</code>. Left-associativity means ((3+4)+5). Watch how E\' chains the additions.' },
+    { focus:'T1',  action:'visit',   inh:{}, syn:{},         ast:'', activeRule:4,
+      exp:'<strong>Visit T (first "3")</strong>.' },
+    { focus:'F1',  action:'visit',   inh:{}, syn:{F1:'leaf(3)'}, ast:'leaf(3)', activeRule:7,
+      exp:'<strong>Visit F → const(3)</strong>. <code style="color:var(--syn)">F.ptr = makeLeaf(3)</code>.' },
+    { focus:'Tp1', action:'inherit', inh:{Tp1:'leaf(3)'}, syn:{}, ast:'leaf(3)', activeRule:4,
+      exp:'<strong>Inherit into T\'</strong>. <code style="color:var(--inh)">T\'.inh = leaf(3)</code>.' },
+    { focus:'Tp1', action:'synth',   inh:{}, syn:{Tp1:'leaf(3)'}, ast:'leaf(3)', activeRule:6,
+      exp:'<strong>T\' → ε</strong>. <code style="color:var(--syn)">T\'.syn = leaf(3)</code>.' },
+    { focus:'T1',  action:'synth',   inh:{}, syn:{T1:'leaf(3)'}, ast:'leaf(3)', activeRule:4,
+      exp:'<strong>T.ptr = leaf(3)</strong>.' },
+    { focus:'Ep1', action:'inherit', inh:{Ep1:'leaf(3)'}, syn:{}, ast:'leaf(3)', activeRule:1,
+      exp:'<strong>Inherit into E\'</strong>. Rule 1: <code style="color:var(--inh)">E\'.inh = leaf(3)</code>. Starts the addition chain.' },
+    { focus:'T2',  action:'visit',   inh:{}, syn:{},         ast:'leaf(3)', activeRule:4,
+      exp:'<strong>Visit T (the "4")</strong>.' },
+    { focus:'F2',  action:'visit',   inh:{}, syn:{F2:'leaf(4)'}, ast:'leaf(4)', activeRule:7,
+      exp:'<strong>Visit F → const(4)</strong>. <code style="color:var(--syn)">F.ptr = makeLeaf(4)</code>.' },
+    { focus:'Tp2', action:'inherit', inh:{Tp2:'leaf(4)'}, syn:{}, ast:'leaf(4)', activeRule:4,
+      exp:'<strong>Inherit into T\'</strong>. <code style="color:var(--inh)">T\'.inh = leaf(4)</code>.' },
+    { focus:'Tp2', action:'synth',   inh:{}, syn:{Tp2:'leaf(4)'}, ast:'leaf(4)', activeRule:6,
+      exp:'<strong>T\' → ε</strong>. <code style="color:var(--syn)">T\'.syn = leaf(4)</code>.' },
+    { focus:'T2',  action:'synth',   inh:{}, syn:{T2:'leaf(4)'}, ast:'leaf(4)', activeRule:4,
+      exp:'<strong>T.ptr = leaf(4)</strong>.' },
+    { focus:'Ep2', action:'inherit', inh:{Ep2:'(3+4)'}, syn:{}, ast:'(3+4)', activeRule:2,
+      exp:'<strong>Inherit into E\'₁</strong>. Rule 2: <code style="color:var(--inh)">E\'₁.inh = makeNode(\'+\', leaf(3), leaf(4)) = node(+,3,4)</code>. First addition assembled.' },
+    { focus:'T3',  action:'visit',   inh:{}, syn:{},         ast:'(3+4)', activeRule:4,
+      exp:'<strong>Visit T (the "5")</strong>. Second addition\'s right operand.' },
+    { focus:'F3',  action:'visit',   inh:{}, syn:{F3:'leaf(5)'}, ast:'leaf(5)', activeRule:7,
+      exp:'<strong>Visit F → const(5)</strong>. <code style="color:var(--syn)">F.ptr = makeLeaf(5)</code>.' },
+    { focus:'Tp3', action:'inherit', inh:{Tp3:'leaf(5)'}, syn:{}, ast:'leaf(5)', activeRule:4,
+      exp:'<strong>Inherit into T\'</strong>. <code style="color:var(--inh)">T\'.inh = leaf(5)</code>.' },
+    { focus:'Tp3', action:'synth',   inh:{}, syn:{Tp3:'leaf(5)'}, ast:'leaf(5)', activeRule:6,
+      exp:'<strong>T\' → ε</strong>. <code style="color:var(--syn)">T\'.syn = leaf(5)</code>.' },
+    { focus:'T3',  action:'synth',   inh:{}, syn:{T3:'leaf(5)'}, ast:'leaf(5)', activeRule:4,
+      exp:'<strong>T.ptr = leaf(5)</strong>.' },
+    { focus:'Ep3', action:'inherit', inh:{Ep3:'((3+4)+5)'}, syn:{}, ast:'((3+4)+5)', activeRule:2,
+      exp:'<strong>Inherit into E\'₂</strong>. Rule 2: <code style="color:var(--inh)">E\'₂.inh = makeNode(\'+\', node(+,3,4), leaf(5))</code>. Second addition folds in — left-associative!' },
+    { focus:'Ep3', action:'synth',   inh:{}, syn:{Ep3:'((3+4)+5)'}, ast:'((3+4)+5)', activeRule:3,
+      exp:'<strong>E\'₂ → ε</strong>. Rule 3: <code style="color:var(--syn)">E\'₂.syn = node(+, node(+,3,4), leaf(5))</code>.' },
+    { focus:'Ep2', action:'synth',   inh:{}, syn:{Ep2:'((3+4)+5)'}, ast:'((3+4)+5)', activeRule:2,
+      exp:'<strong>E\'₁.syn = E\'₂.syn</strong>. Propagate upward.' },
+    { focus:'Ep1', action:'synth',   inh:{}, syn:{Ep1:'((3+4)+5)'}, ast:'((3+4)+5)', activeRule:2,
+      exp:'<strong>E\'.syn = E\'₁.syn</strong>.' },
+    { focus:'E',   action:'accept',  inh:{}, syn:{E:'((3+4)+5)'}, ast:'((3+4)+5)', activeRule:1,
+      exp:'<strong>E.ptr = node(+, node(+,3,4), leaf(5))</strong>. <strong>Done!</strong> AST is <strong>((3+4)+5)</strong> — left-associative as expected. The grammar\'s left-recursion removal with E\' naturally encodes left-to-right association via the .inh chain.' },
+  ];
+}
+
+const EXPRESSIONS = {
+  e1: { tree: tree_e1, steps: steps_e1 },
+  e2: { tree: tree_e2, steps: steps_e2 },
+  e3: { tree: tree_e3, steps: steps_e3 },
+  e4: { tree: tree_e4, steps: steps_e4 },
+  e5: { tree: tree_e5, steps: steps_e5 },
+};
+
+// ─── Runtime state ─────────────────────────────────────────────────────────────
+let steps = [], stepIdx = -1, rootNode = null, nodeMap = {};
+let nodeInh = {}, nodeSyn = {}, nodeState = {};
+let autoTimer = null;
+
+function collectNodes(n) {
+  nodeMap[n.id] = n;
+  nodeState[n.id] = n.isTerminal ? 'terminal' : 'pending';
+  n.children.forEach(collectNodes);
+}
+
+function initExpression() {
+  nodeCounter = 0;
+  const key = document.getElementById('exprSelect').value;
+  const expr = EXPRESSIONS[key];
+  steps = expr.steps();
+  stepIdx = -1;
+  rootNode = expr.tree();
+  nodeMap = {}; nodeInh = {}; nodeSyn = {}; nodeState = {};
+  collectNodes(rootNode);
+  layoutTree();
+  renderStepLog();
+  renderTrav([], '');
+  clearActiveRules();
+  document.getElementById('currentExplanation').innerHTML =
+    'Click <strong>Next &#8594;</strong> to walk through the top-down left-to-right attribute evaluation.';
+  document.getElementById('stepCounter').textContent = `Step 0 / ${steps.length}`;
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  drawTree();
+}
+
+function applyStep(step) {
+  Object.entries(step.inh).forEach(([id, val]) => {
+    nodeInh[id] = val;
+    if (nodeState[id] === 'pending') nodeState[id] = 'visiting';
+  });
+  Object.entries(step.syn).forEach(([id, val]) => {
+    nodeSyn[id] = val;
+    if (nodeMap[id]) nodeState[id] = 'done';
+  });
+  if (step.action === 'accept') {
+    Object.keys(nodeState).forEach(id => {
+      if (nodeState[id] !== 'terminal') nodeState[id] = 'done';
+    });
+  }
+}
+
+function nextStep() {
+  if (stepIdx >= steps.length - 1) return;
+  stepIdx++;
+  applyStep(steps[stepIdx]);
+  updateUI();
+}
+
+function prevStep() {
+  if (stepIdx < 0) return;
+  nodeCounter = 0;
+  nodeInh = {}; nodeSyn = {}; nodeState = {};
+  collectNodes(rootNode);
+  stepIdx--;
+  for (let i = 0; i <= stepIdx; i++) applyStep(steps[i]);
+  updateUI();
+}
+
+function updateUI() {
+  layoutTree();
+  drawTree();
+  const step = steps[stepIdx];
+  if (step) {
+    document.getElementById('currentExplanation').innerHTML = step.exp;
+    renderTrav(steps.slice(0, stepIdx + 1).map(s => s.focus), step.ast || '');
+    clearActiveRules();
+    if (step.activeRule) {
+      const row = document.getElementById(`rule-${step.activeRule}`);
+      if (row) row.classList.add('active-rule');
+    }
+  }
+  document.getElementById('stepCounter').textContent = `Step ${stepIdx + 1} / ${steps.length}`;
+  updateStepLog();
+  if (stepIdx === steps.length - 1) {
+    const t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+}
+
+function autoPlay() {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; return; }
+  if (stepIdx < 0) initExpression();
+  autoTimer = setInterval(() => {
+    if (stepIdx >= steps.length - 1) { clearInterval(autoTimer); autoTimer = null; return; }
+    nextStep();
+  }, 1700);
+}
+
+// ─── Layout ────────────────────────────────────────────────────────────────────
+function layoutTree() {
+  if (!rootNode) return;
+  const ce = document.getElementById('treeCanvas');
+  const W = ce.width, H = ce.height;
+  const marginX = 20, marginTop = 30;
+  const GAP_X = 14, UNIT = NW + GAP_X;
+
+  function sw(n) {
+    if (!n.children.length) return 1;
+    return n.children.reduce((s, c) => s + sw(c), 0);
+  }
+  function ax(n, sx) {
+    if (!n.children.length) { n.x = sx + 0.5; return; }
+    let cur = sx; const cxs = [];
+    n.children.forEach(c => { ax(c, cur); cxs.push(c.x); cur += sw(c); });
+    n.x = (cxs[0] + cxs[cxs.length - 1]) / 2;
+  }
+  function ad(n, d) { n.depth = d; n.children.forEach(c => ad(c, d + 1)); }
+
+  ax(rootNode, 0);
+  ad(rootNode, 0);
+
+  const all = Object.values(nodeMap);
+  const maxX = Math.max(...all.map(n => n.x), 0);
+  const maxD = Math.max(...all.map(n => n.depth), 1);
+
+  const treeW  = maxX * UNIT + UNIT;
+  const scaleX = Math.min((W - marginX*2) / treeW, 1.4);
+  const maxNH  = NH_BASE + 2 * ATTR_H;
+  const GAP_Y  = 22;
+  const vsp    = Math.min((H - marginTop*2) / maxD, maxNH + GAP_Y);
+
+  all.forEach(n => {
+    n.px = marginX + (n.x * UNIT + UNIT/2) * scaleX;
+    n.py = marginTop + nodeHeight(n)/2 + n.depth * vsp;
+  });
+}
+
+// ─── Canvas ────────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('treeCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const r = canvas.parentElement.getBoundingClientRect();
+  canvas.width  = r.width;
+  canvas.height = r.height - 46 - 38 - 56;
+  layoutTree();
+  if (rootNode) drawTree(); else drawEmpty();
+}
+window.addEventListener('resize', resizeCanvas);
+setTimeout(resizeCanvas, 100);
+
+// ─── Node attribute schema ─────────────────────────────────────────────────────
+// Which attributes each node type can have (defines what rows to always show)
+const NODE_ATTRS = {
+  'E':  { ptr: 'syn' },
+  "E'": { inh: 'inh', syn: 'syn' },
+  'T':  { ptr: 'syn' },
+  "T'": { inh: 'inh', syn: 'syn' },
+  'F':  { ptr: 'syn' },
+};
+// Map a parse-tree node id → canonical sym key for NODE_ATTRS lookup
+function attrSchema(n) {
+  // strip trailing digits to normalise L1→L, Ep2→E', Tp1→T'
+  const s = n.sym;
+  if (NODE_ATTRS[s]) return NODE_ATTRS[s];
+  return null;
+}
+
+// Node box dimensions
+const NW = 90, NH_BASE = 26, ATTR_H = 16; // box width, header height, per-attr row
+
+function nodeHeight(n) {
+  if (n.isTerminal) return 28;
+  const schema = attrSchema(n);
+  if (!schema) return NH_BASE;
+  return NH_BASE + Object.keys(schema).length * ATTR_H;
+}
+
+function drawEmpty() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#0d0f1a'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.font='14px Sora,sans-serif'; ctx.fillStyle='#1f2340';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('Load an expression to begin', canvas.width/2, canvas.height/2);
+}
+
+function arrowAt(x1,y1,x2,y2,col,size=8) {
+  const a=Math.atan2(y2-y1,x2-x1);
+  ctx.save(); ctx.translate(x2,y2); ctx.rotate(a);
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-size,-size*0.45); ctx.lineTo(-size,size*0.45);
+  ctx.closePath(); ctx.fillStyle=col; ctx.fill(); ctx.restore();
+}
+
+function roundRect(x,y,w,h,r,fill,stroke,lw=1.5) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+  ctx.arcTo(x+w,y,x+w,y+r,r); ctx.lineTo(x+w,y+h-r);
+  ctx.arcTo(x+w,y+h,x+w-r,y+h,r); ctx.lineTo(x+r,y+h);
+  ctx.arcTo(x,y+h,x,y+h-r,r); ctx.lineTo(x,y+r);
+  ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
+  ctx.fillStyle=fill; ctx.fill();
+  ctx.strokeStyle=stroke; ctx.lineWidth=lw; ctx.stroke();
+}
+
+function drawTree() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#0d0f1a'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  if (!rootNode) { drawEmpty(); return; }
+
+  // bottom legend
+  ctx.font=`10px 'JetBrains Mono',monospace`; ctx.fillStyle='#252040';
+  ctx.textAlign='left'; ctx.textBaseline='bottom';
+  ctx.fillText('\u2193 .inh inherited (pink)   \u2191 .syn synthesized (green)   \u25a1 = not yet set', 14, canvas.height-6);
+
+  const all = Object.values(nodeMap);
+  const curFocus = steps[stepIdx]?.focus;
+
+  // ── Edges ──────────────────────────────────────────────────────────────────
+  all.forEach(n => {
+    const nh = nodeHeight(n);
+    n.children.forEach(c => {
+      const ch = nodeHeight(c);
+      // connect bottom-center of parent to top-center of child
+      const x1 = n.px, y1 = n.py + nh/2;
+      const x2 = c.px, y2 = c.py - ch/2;
+      const mid = (y1+y2)/2;
+
+      // base edge
+      ctx.beginPath(); ctx.moveTo(x1,y1);
+      ctx.bezierCurveTo(x1,mid,x2,mid,x2,y2);
+      ctx.strokeStyle='#1e2540'; ctx.lineWidth=1.5; ctx.stroke();
+
+      // pink inh arrow (parent → child, downward)
+      const inhReady = nodeInh[c.id]!==undefined;
+      if (inhReady) {
+        ctx.beginPath(); ctx.moveTo(x1,y1);
+        ctx.bezierCurveTo(x1,mid,x2,mid,x2,y2);
+        ctx.strokeStyle='rgba(224,90,170,.7)'; ctx.lineWidth=2; ctx.stroke();
+        arrowAt(x1,y1,x2,y2,'rgba(224,90,170,.9)');
+      }
+
+      // green syn arrow (child → parent, upward)
+      const synReady = nodeSyn[c.id]!==undefined && !c.isTerminal;
+      if (synReady) {
+        arrowAt(x2,y2,x1,y1,'rgba(61,214,140,.6)');
+      }
+    });
+  });
+
+  // ── Nodes ──────────────────────────────────────────────────────────────────
+  all.forEach(n => {
+    const st  = nodeState[n.id]||'pending';
+    const isCur = n.id===curFocus && stepIdx>=0 && steps[stepIdx]?.action!=='accept';
+    const nh  = nodeHeight(n);
+    const x   = n.px - NW/2;
+    const y   = n.py - nh/2;
+
+    // colours
+    let headerFill, border;
+    if (n.isTerminal)               { headerFill='#3a2510'; border='#f5a623'; }
+    else if (isCur)                 { headerFill='#2e1840'; border='#e05aaa'; }
+    else if (st==='done')           { headerFill='#0f2e1e'; border='#3dd68c'; }
+    else if (st==='visiting')       { headerFill='#1e1535'; border='#9a50cc'; }
+    else                            { headerFill='#161c30'; border='#2a3060'; }
+
+    if (isCur) { ctx.shadowColor='#e05aaa'; ctx.shadowBlur=18; }
+
+    // outer box
+    roundRect(x, y, NW, nh, 5, headerFill, border, isCur?2.5:1.5);
+    ctx.shadowBlur=0;
+
+    if (n.isTerminal) {
+      // just label centred
+      ctx.fillStyle='#f5a623'; ctx.font=`bold 12px 'JetBrains Mono',monospace`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(n.sym, n.px, n.py);
+      return;
+    }
+
+    // header band: symbol name
+    const hdrH = NH_BASE;
+    roundRect(x, y, NW, hdrH, 5, headerFill, border, isCur?2.5:1.5);
+    // symbol
+    ctx.fillStyle = isCur ? '#e05aaa' : st==='done' ? '#3dd68c' : '#c8d0e8';
+    ctx.font=`bold 12px 'JetBrains Mono',monospace`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(n.sym, n.px, y + hdrH/2);
+
+    // divider
+    ctx.beginPath(); ctx.moveTo(x,y+hdrH); ctx.lineTo(x+NW,y+hdrH);
+    ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=1; ctx.stroke();
+
+    // attribute rows
+    const schema = attrSchema(n);
+    if (!schema) return;
+
+    let rowY = y + hdrH;
+    Object.entries(schema).forEach(([attrName, kind]) => {
+      const isInh = kind==='inh';
+      const val   = isInh ? nodeInh[n.id] : nodeSyn[n.id];
+      const hasVal = val !== undefined;
+
+      // row bg
+      const rowBg = hasVal
+        ? (isInh ? 'rgba(224,90,170,0.12)' : 'rgba(61,214,140,0.10)')
+        : 'rgba(255,255,255,0.02)';
+      ctx.fillStyle = rowBg;
+      ctx.fillRect(x, rowY, NW, ATTR_H);
+
+      // attr name pill
+      const pillCol  = isInh ? '#e05aaa' : '#3dd68c';
+      const pillBg   = isInh ? 'rgba(224,90,170,0.18)' : 'rgba(61,214,140,0.15)';
+      const arrow    = isInh ? '\u2193' : '\u2191';
+      const label    = `.${attrName}`;
+
+      // arrow indicator
+      ctx.font=`9px 'JetBrains Mono',monospace`; ctx.textBaseline='middle';
+      ctx.fillStyle = pillCol;
+      ctx.textAlign='left';
+      ctx.fillText(arrow, x+4, rowY+ATTR_H/2);
+
+      // attr key
+      ctx.fillStyle = hasVal ? pillCol : '#3a4060';
+      ctx.font=`bold 9px 'JetBrains Mono',monospace`;
+      ctx.fillText(label, x+13, rowY+ATTR_H/2);
+
+      // value or placeholder
+      ctx.textAlign='right';
+      if (hasVal) {
+        const disp = val.length > 10 ? val.slice(0,9)+'\u2026' : val;
+        ctx.fillStyle = pillCol;
+        ctx.font=`bold 9px 'JetBrains Mono',monospace`;
+        ctx.fillText(disp, x+NW-4, rowY+ATTR_H/2);
+
+        // animated "new value" highlight: bright glow if this was just set this step
+        const step = steps[stepIdx];
+        const justSet = step && (
+          (isInh && step.inh[n.id]!==undefined) ||
+          (!isInh && step.syn[n.id]!==undefined)
+        );
+        if (justSet) {
+          ctx.fillStyle = isInh ? 'rgba(224,90,170,0.35)' : 'rgba(61,214,140,0.3)';
+          ctx.fillRect(x+NW/2, rowY, NW/2, ATTR_H);
+          ctx.fillStyle = isInh ? '#ff80cc' : '#7affc8';
+          ctx.font=`bold 9px 'JetBrains Mono',monospace`;
+          ctx.textAlign='right';
+          ctx.fillText(disp, x+NW-4, rowY+ATTR_H/2);
+        }
+      } else {
+        ctx.fillStyle='#2a3055';
+        ctx.font=`9px 'JetBrains Mono',monospace`;
+        ctx.fillText('\u2014', x+NW-4, rowY+ATTR_H/2);
+      }
+
+      // row bottom border
+      ctx.beginPath(); ctx.moveTo(x,rowY+ATTR_H); ctx.lineTo(x+NW,rowY+ATTR_H);
+      ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=1; ctx.stroke();
+
+      rowY += ATTR_H;
+    });
+
+    // re-draw outer border on top
+    ctx.beginPath();
+    ctx.roundRect?.(x,y,NW,nh,5);
+    ctx.strokeStyle=border; ctx.lineWidth=isCur?2.5:1.5; ctx.stroke();
+  });
+}
+
+// ─── Traversal bar ─────────────────────────────────────────────────────────────
+function renderTrav(order, ast) {
+  const el = document.getElementById('travDisplay');
+  el.innerHTML = '';
+  if (!order.length) {
+    el.innerHTML='<span style="color:#1f2340;font-size:11px;">not started</span>'; return;
+  }
+  // Show last unique focus nodes (condensed)
+  const unique = [];
+  order.forEach(id => { if (!unique.length||unique[unique.length-1]!==id) unique.push(id); });
+  const show = unique.slice(-8); // last 8 unique
+  if (unique.length>8) {
+    const sp=document.createElement('span');
+    sp.style.cssText='color:#2a3060;font-size:11px;'; sp.textContent='…';
+    el.appendChild(sp);
+    const a=document.createElement('span'); a.style.cssText='color:#2a3060;font-size:10px;'; a.textContent=' → '; el.appendChild(a);
+  }
+  show.forEach((id,i) => {
+    const n=nodeMap[id]||{sym:id};
+    const d=document.createElement('div');
+    d.className='trav-item '+(i===show.length-1?'current-node':'visited');
+    let extra='';
+    if (nodeInh[id]!==undefined) extra+=`<span style="color:var(--inh);font-size:9px;"> \u2193${nodeInh[id].length>7?nodeInh[id].slice(0,6)+'\u2026':nodeInh[id]}</span>`;
+    if (nodeSyn[id]!==undefined) extra+=`<span style="color:var(--syn);font-size:9px;"> \u2191${nodeSyn[id].length>7?nodeSyn[id].slice(0,6)+'\u2026':nodeSyn[id]}</span>`;
+    d.innerHTML=`<span class="tsym">${n.sym}</span>${extra}`;
+    el.appendChild(d);
+    if (i<show.length-1) {
+      const a=document.createElement('span'); a.style.cssText='color:#2a3060;font-size:10px;'; a.textContent=' \u2192 '; el.appendChild(a);
+    }
+  });
+  if (ast) {
+    const sep=document.createElement('span'); sep.style.cssText='color:#2a3060;margin:0 8px;'; sep.textContent='|'; el.appendChild(sep);
+    const astEl=document.createElement('span');
+    astEl.style.cssText='color:var(--inh);font-family:"JetBrains Mono",monospace;font-size:11px;';
+    astEl.textContent='AST: '+ast;
+    el.appendChild(astEl);
+  }
+}
+
+// ─── Steps log ─────────────────────────────────────────────────────────────────
+function renderStepLog() {
+  const log = document.getElementById('stepsLog');
+  log.innerHTML = '';
+  steps.forEach((s,i) => {
+    const div=document.createElement('div');
+    div.className='step-entry future'; div.id=`step-entry-${i}`;
+    const ac = s.action==='accept'?'accept':s.action==='inherit'?'inherit':s.action==='synth'?'synth':'visit';
+    const inhP=Object.entries(s.inh).map(([k,v])=>`<span style="color:var(--inh)">${k}.inh=<b>${v}</b></span>`).join(', ');
+    const synP=Object.entries(s.syn).map(([k,v])=>`<span style="color:var(--syn)">${k}=<b>${v}</b></span>`).join(', ');
+    div.innerHTML=`
+      <div class="step-num">Step ${i+1}</div>
+      <div><span class="step-action ${ac}">${s.action.toUpperCase()}</span> <code style="color:#a78bfa">${s.focus}</code></div>
+      ${inhP?`<div class="step-inh">\u2193 ${inhP}</div>`:''}
+      ${synP?`<div class="step-syn">\u2191 ${synP}</div>`:''}
+      ${s.ast?`<div style="color:#e05aaa;font-size:10px;font-family:'JetBrains Mono',monospace;margin-top:2px;">AST: ${s.ast}</div>`:''}
+    `;
+    log.appendChild(div);
+  });
+}
+
+function updateStepLog() {
+  steps.forEach((_,i) => {
+    const el=document.getElementById(`step-entry-${i}`);
+    if (!el) return;
+    el.className='step-entry '+(i<stepIdx?'past':i===stepIdx?'current':'future');
+    if (i===stepIdx) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  });
+}
+
+function clearActiveRules() {
+  document.querySelectorAll('#grammarTable tr').forEach(r=>r.classList.remove('active-rule'));
+}
+
+// ─── Init ───────────────────────────────────────────────────────────────────────
+drawEmpty();
+
+document.addEventListener('keydown', e => {
+  if (e.key==='ArrowRight'||e.key===' ') { e.preventDefault(); nextStep(); }
+  if (e.key==='ArrowLeft') { e.preventDefault(); prevStep(); }
+});
+
+</script>
+</body>
+</html>

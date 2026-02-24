@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S-Attributed Grammar — Bottom-Up Tree Construction</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f1a;
+    --panel: #131525;
+    --border: #1f2340;
+    --accent: #5b8af5;
+    --accent2: #f5a623;
+    --green: #3dd68c;
+    --red: #f55b5b;
+    --purple: #a78bfa;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --node-default: #1e2440;
+    --node-active: #2a3a70;
+    --node-done: #1a3a2a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  header {
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: linear-gradient(135deg, #0d0f1a 0%, #131a2e 100%);
+  }
+
+  .header-badge {
+    background: var(--accent);
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  header h1 span { color: var(--accent); }
+
+  .header-sub {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Layout */
+  .container {
+    display: grid;
+    grid-template-columns: 300px 1fr 280px;
+    grid-template-rows: auto 1fr auto;
+    gap: 0;
+    height: calc(100vh - 85px);
+  }
+
+  /* Left Panel — Grammar Rules */
+  .panel-left {
+    border-right: 1px solid var(--border);
+    padding: 24px 20px;
+    overflow-y: auto;
+    background: var(--panel);
+  }
+
+  .panel-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-title::before {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 14px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  .grammar-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .grammar-table th {
+    color: var(--muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    padding: 6px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .grammar-table td {
+    padding: 8px 8px;
+    border-bottom: 1px solid rgba(31,35,64,0.5);
+    vertical-align: top;
+    line-height: 1.6;
+  }
+  .grammar-table tr { transition: background 0.3s; }
+  .grammar-table tr.active-rule td { background: rgba(91,138,245,0.12); }
+  .grammar-table tr.active-rule td:first-child { border-left: 2px solid var(--accent); }
+
+  .prod { color: var(--accent); }
+  .sem { color: var(--green); font-size: 11px; }
+  .rule-num { color: var(--muted); font-size: 10px; }
+
+  /* Center — Tree Canvas + Input */
+  .panel-center {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .input-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+
+  .input-bar label {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+  }
+
+  .input-bar select, .input-bar input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-bar select:focus, .input-bar input:focus {
+    border-color: var(--accent);
+  }
+
+  .btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn:hover { background: #4a79e0; }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    transition: border-color 0.2s;
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  #treeCanvas {
+    flex: 1;
+    display: block;
+  }
+
+  /* Stack display */
+  .stack-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    overflow-x: auto;
+    min-height: 46px;
+  }
+
+  .stack-label { color: var(--muted); white-space: nowrap; }
+
+  .stack-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--node-default);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 3px 9px;
+    font-size: 11px;
+    transition: all 0.3s;
+    white-space: nowrap;
+  }
+
+  .stack-item .sym { color: var(--text); }
+  .stack-item .val { color: var(--green); font-size: 10px; }
+  .stack-item.just-pushed { background: rgba(91,138,245,0.2); border-color: var(--accent); }
+  .stack-item.reducing { background: rgba(245,166,35,0.2); border-color: var(--accent2); }
+
+  /* Right Panel — Steps Log */
+  .panel-right {
+    border-left: 1px solid var(--border);
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .steps-log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+
+  .step-entry {
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border: 1px solid transparent;
+    font-size: 12px;
+    line-height: 1.6;
+    opacity: 0.5;
+    transition: all 0.3s;
+  }
+  .step-entry.past { opacity: 0.4; }
+  .step-entry.current {
+    opacity: 1;
+    background: rgba(91,138,245,0.1);
+    border-color: var(--accent);
+  }
+  .step-entry.future { opacity: 0.25; }
+
+  .step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .step-action {
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .step-action.shift { color: var(--accent); }
+  .step-action.reduce { color: var(--accent2); }
+  .step-action.accept { color: var(--green); }
+  .step-desc { color: var(--muted); margin-top: 3px; }
+  .step-attr { color: var(--green); font-family: 'JetBrains Mono', monospace; font-size: 11px; margin-top: 2px; }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Explanation box */
+  .explanation {
+    margin: 0 16px 0;
+    padding: 12px 14px;
+    background: var(--bg);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+  .explanation strong { color: var(--text); }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 16px;
+    padding: 8px 24px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; color: var(--muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--green);
+    color: #0d1a14;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    opacity: 0;
+    transition: all 0.4s;
+    pointer-events: none;
+    z-index: 100;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    .container { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; }
+    .panel-left, .panel-right { border: none; border-bottom: 1px solid var(--border); }
+    #treeCanvas { height: 350px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-badge">CSCI 282</div>
+  <h1>S-Attributed Grammar <span>&rarr;</span> Bottom-Up Tree Construction</h1>
+  <div class="header-sub">Slide 15 Visualizer</div>
+</header>
+
+<div class="container">
+
+  <!-- LEFT: Grammar Rules -->
+  <div class="panel-left">
+    <div class="panel-title">Grammar &amp; Semantic Rules</div>
+    
+    <div style="font-size:11px; color:var(--muted); margin-bottom:14px; line-height:1.6;">
+      The grammar evaluates arithmetic expressions. Every attribute is <strong style="color:var(--green)">synthesized</strong> — values flow <em>bottom-up</em> from leaves to root.
+    </div>
+
+    <table class="grammar-table" id="grammarTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Production</th>
+          <th>Semantic Rule</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr id="rule-1">
+          <td class="rule-num">1</td>
+          <td class="prod">E → E + T</td>
+          <td class="sem">E.val = E₁.val + T.val</td>
+        </tr>
+        <tr id="rule-2">
+          <td class="rule-num">2</td>
+          <td class="prod">E → E − T</td>
+          <td class="sem">E.val = E₁.val − T.val</td>
+        </tr>
+        <tr id="rule-3">
+          <td class="rule-num">3</td>
+          <td class="prod">E → T</td>
+          <td class="sem">E.val = T.val</td>
+        </tr>
+        <tr id="rule-4">
+          <td class="rule-num">4</td>
+          <td class="prod">T → T * F</td>
+          <td class="sem">T.val = T₁.val × F.val</td>
+        </tr>
+        <tr id="rule-5">
+          <td class="rule-num">5</td>
+          <td class="prod">T → T / F</td>
+          <td class="sem">T.val = T₁.val ÷ F.val</td>
+        </tr>
+        <tr id="rule-6">
+          <td class="rule-num">6</td>
+          <td class="prod">T → F</td>
+          <td class="sem">T.val = F.val</td>
+        </tr>
+        <tr id="rule-7">
+          <td class="rule-num">7</td>
+          <td class="prod">F → ( E )</td>
+          <td class="sem">F.val = E.val</td>
+        </tr>
+        <tr id="rule-8">
+          <td class="rule-num">8</td>
+          <td class="prod">F → num</td>
+          <td class="sem">F.val = num.lexval</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:20px;">
+      <div class="panel-title">Key Concept</div>
+      <div style="font-size:11px; color:var(--muted); line-height:1.8;">
+        <strong style="color:var(--accent)">S-Attributed SDDs</strong> use only synthesized attributes. The bottom-up parser builds the parse tree and evaluates attributes as each <strong style="color:var(--accent2)">reduce</strong> action fires — nodes get their <code style="color:var(--green)">.val</code> when their children are all known.
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: Tree + Controls -->
+  <div class="panel-center">
+    <div class="input-bar">
+      <label>Expression:</label>
+      <select id="exprSelect">
+        <option value="3+4">3 + 4</option>
+        <option value="3*4+2" selected>3 * 4 + 2</option>
+        <option value="2+3*5">2 + 3 * 5</option>
+        <option value="6-2*3">6 − 2 * 3</option>
+        <option value="10/2+3">10 / 2 + 3</option>
+        <option value="2*3*4">2 * 3 * 4</option>
+      </select>
+      <button class="btn" onclick="initExpression()">▶ Load</button>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#1e2440; border:1px solid #3a4070;"></div>Pending</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2a3a70; border:1px solid var(--accent);"></div>Active (just reduced)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#1a3a2a; border:1px solid var(--green);"></div>Evaluated</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3a2a10; border:1px solid var(--accent2);"></div>Terminal (input)</div>
+      <div class="legend-item" style="margin-left:auto;color:var(--green);font-size:11px;font-family:'JetBrains Mono',monospace;">↑ leaves at bottom · root grows up</div>
+    </div>
+
+    <canvas id="treeCanvas"></canvas>
+
+    <div class="stack-bar">
+      <span class="stack-label">STACK:</span>
+      <div id="stackDisplay" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Steps -->
+  <div class="panel-right">
+    <div style="padding:16px 16px 8px;">
+      <div class="panel-title">Parse Steps</div>
+    </div>
+
+    <div class="explanation" id="currentExplanation">
+      Select an expression and click <strong>Load</strong> to begin the step-by-step simulation.
+    </div>
+
+    <div style="height:12px;"></div>
+
+    <div class="steps-log" id="stepsLog"></div>
+
+    <div class="controls">
+      <button class="btn-outline" onclick="prevStep()" style="font-size:12px;">← Back</button>
+      <span id="stepCounter" style="font-size:12px;color:var(--muted);align-self:center;">Step 0 / 0</span>
+      <button class="btn" onclick="nextStep()" style="font-size:12px;">Next →</button>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast">✓ Expression fully evaluated!</div>
+
+<script>
+// ─── Grammar & Parser ─────────────────────────────────────────────────────────
+// We hand-define parse steps for each expression for clarity.
+// Each step: { action: 'shift'|'reduce'|'accept', symbol, rule, stack, tree, explanation, activeRule }
+
+const EXPRESSIONS = {
+  '3+4': buildSteps([
+    {tok:'3',val:3},{tok:'+',val:null},{tok:'4',val:4}
+  ], [
+    // shift 3
+    {action:'shift', sym:'num(3)', val:3, rule:null, activeRule:8,
+     exp:'<strong>Shift</strong> terminal <code>num(3)</code> onto the stack. It brings its lexical value <code>val=3</code>.'},
+    // reduce F → num
+    {action:'reduce', sym:'F', val:3, rule:'F → num', activeRule:8,
+     exp:'<strong>Reduce</strong> by Rule 8: <code>F → num</code>. Since this is an S-Attributed grammar, F gets the terminal\'s value: <code>F.val = num.lexval = 3</code>.'},
+    // reduce T → F
+    {action:'reduce', sym:'T', val:3, rule:'T → F', activeRule:6,
+     exp:'<strong>Reduce</strong> by Rule 6: <code>T → F</code>. Synthesize: <code>T.val = F.val = 3</code>. F is now a child of T.'},
+    // reduce E → T
+    {action:'reduce', sym:'E', val:3, rule:'E → T', activeRule:3,
+     exp:'<strong>Reduce</strong> by Rule 3: <code>E → T</code>. Synthesize: <code>E.val = T.val = 3</code>.'},
+    // shift +
+    {action:'shift', sym:'+', val:null, rule:null, activeRule:null,
+     exp:'<strong>Shift</strong> terminal <code>+</code>. Operators don\'t carry a <code>.val</code> attribute — they determine which semantic rule fires at reduce time.'},
+    // shift 4
+    {action:'shift', sym:'num(4)', val:4, rule:null, activeRule:8,
+     exp:'<strong>Shift</strong> terminal <code>num(4)</code> onto the stack with <code>val=4</code>.'},
+    // reduce F → num
+    {action:'reduce', sym:'F', val:4, rule:'F → num', activeRule:8,
+     exp:'<strong>Reduce</strong> by Rule 8: <code>F → num</code>. Synthesize: <code>F.val = num.lexval = 4</code>.'},
+    // reduce T → F
+    {action:'reduce', sym:'T', val:4, rule:'T → F', activeRule:6,
+     exp:'<strong>Reduce</strong> by Rule 6: <code>T → F</code>. Synthesize: <code>T.val = F.val = 4</code>.'},
+    // reduce E → E + T
+    {action:'reduce', sym:'E', val:7, rule:'E → E + T', activeRule:1,
+     exp:'<strong>Reduce</strong> by Rule 1: <code>E → E + T</code>. Now we apply the semantic rule: <code>E.val = E₁.val + T.val = 3 + 4 = <strong>7</strong></code>. The addition is evaluated!'},
+    // accept
+    {action:'accept', sym:'E', val:7, rule:null, activeRule:null,
+     exp:'<strong>Accept!</strong> The input is fully consumed and reduced to <code>E</code>. The final result is <code>E.val = 7</code>. Bottom-up evaluation complete.'},
+  ]),
+
+  '3*4+2': buildSteps([
+    {tok:'3',val:3},{tok:'*',val:null},{tok:'4',val:4},{tok:'+',val:null},{tok:'2',val:2}
+  ], [
+    {action:'shift', sym:'num(3)', val:3, rule:null, activeRule:8,
+     exp:'<strong>Shift</strong> <code>num(3)</code>. Lexer provides <code>lexval=3</code>.'},
+    {action:'reduce', sym:'F', val:3, rule:'F → num', activeRule:8,
+     exp:'<strong>Reduce</strong> Rule 8: <code>F → num</code>. <code>F.val = 3</code>.'},
+    {action:'reduce', sym:'T', val:3, rule:'T → F', activeRule:6,
+     exp:'<strong>Reduce</strong> Rule 6: <code>T → F</code>. <code>T.val = F.val = 3</code>. T is the starting factor.'},
+    {action:'shift', sym:'*', val:null, rule:null, activeRule:null,
+     exp:'<strong>Shift</strong> <code>*</code>. The parser knows multiplication binds tighter than addition, so it doesn\'t reduce the E yet — it waits.'},
+    {action:'shift', sym:'num(4)', val:4, rule:null, activeRule:8,
+     exp:'<strong>Shift</strong> <code>num(4)</code>. <code>lexval=4</code>.'},
+    {action:'reduce', sym:'F', val:4, rule:'F → num', activeRule:8,
+     exp:'<strong>Reduce</strong> Rule 8: <code>F → num</code>. <code>F.val = 4</code>.'},
+    {action:'reduce', sym:'T', val:12, rule:'T → T * F', activeRule:4,
+     exp:'<strong>Reduce</strong> Rule 4: <code>T → T * F</code>. Semantic rule fires: <code>T.val = T₁.val × F.val = 3 × 4 = <strong>12</strong></code>. Multiplication computed first — operator precedence!'},
+    {action:'reduce', sym:'E', val:12, rule:'E → T', activeRule:3,
+     exp:'<strong>Reduce</strong> Rule 3: <code>E → T</code>. <code>E.val = T.val = 12</code>. The left-hand part of the addition is now an E.'},
+    {action:'shift', sym:'+', val:null, rule:null, activeRule:null,
+     exp:'<strong>Shift</strong> <code>+</code>. We now push the addition operator.'},
+    {action:'shift', sym:'num(2)', val:2, rule:null, activeRule:8,
+     exp:'<strong>Shift</strong> <code>num(2)</code>. <code>lexval=2</code>.'},
+    {action:'reduce', sym:'F', val:2, rule:'F → num', activeRule:8,
+     exp:'<strong>Reduce</strong> Rule 8: <code>F → num</code>. <code>F.val = 2</code>.'},
+    {action:'reduce', sym:'T', val:2, rule:'T → F', activeRule:6,
+     exp:'<strong>Reduce</strong> Rule 6: <code>T → F</code>. <code>T.val = 2</code>.'},
+    {action:'reduce', sym:'E', val:14, rule:'E → E + T', activeRule:1,
+     exp:'<strong>Reduce</strong> Rule 1: <code>E → E + T</code>. Semantic rule: <code>E.val = E₁.val + T.val = 12 + 2 = <strong>14</strong></code>. Addition computed after multiplication — precedence enforced by grammar structure!'},
+    {action:'accept', sym:'E', val:14, rule:null, activeRule:null,
+     exp:'<strong>Accept!</strong> Input fully parsed. The tree is built bottom-up with <code>E.val = 14</code>. Notice how <em>3 × 4</em> was evaluated before <em>+ 2</em> — the grammar\'s structure enforces precedence automatically.'},
+  ]),
+
+  '2+3*5': buildSteps([], [
+    {action:'shift', sym:'num(2)', val:2, rule:null, activeRule:8,
+     exp:'<strong>Shift</strong> <code>num(2)</code>. <code>lexval=2</code>.'},
+    {action:'reduce', sym:'F', val:2, rule:'F → num', activeRule:8,
+     exp:'<strong>Reduce</strong> Rule 8: <code>F → num</code>. <code>F.val = 2</code>.'},
+    {action:'reduce', sym:'T', val:2, rule:'T → F', activeRule:6,
+     exp:'<strong>Reduce</strong> Rule 6: <code>T → F</code>. <code>T.val = 2</code>.'},
+    {action:'reduce', sym:'E', val:2, rule:'E → T', activeRule:3,
+     exp:'<strong>Reduce</strong> Rule 3: <code>E → T</code>. <code>E.val = 2</code>. The parser reduces to E in anticipation of the + operator.'},
+    {action:'shift', sym:'+', val:null, rule:null, activeRule:null,
+     exp:'<strong>Shift</strong> <code>+</code>. The parser holds E on the stack, waiting for the right operand.'},
+    {action:'shift', sym:'num(3)', val:3, rule:null, activeRule:8,
+     exp:'<strong>Shift</strong> <code>num(3)</code>. <code>lexval=3</code>.'},
+    {action:'reduce', sym:'F', val:3, rule:'F → num', activeRule:8,
+     exp:'<strong>Reduce</strong> Rule 8: <code>F.val = 3</code>.'},
+    {action:'reduce', sym:'T', val:3, rule:'T → F', activeRule:6,
+     exp:'<strong>Reduce</strong> Rule 6: <code>T.val = 3</code>. But wait — the parser peeks at the next token and sees <code>*</code>, which has higher precedence. So it does NOT reduce E → E + T yet!'},
+    {action:'shift', sym:'*', val:null, rule:null, activeRule:null,
+     exp:'<strong>Shift</strong> <code>*</code>. The parser delays the + reduction because * has higher precedence. This is how the grammar encodes precedence implicitly.'},
+    {action:'shift', sym:'num(5)', val:5, rule:null, activeRule:8,
+     exp:'<strong>Shift</strong> <code>num(5)</code>. <code>lexval=5</code>.'},
+    {action:'reduce', sym:'F', val:5, rule:'F → num', activeRule:8,
+     exp:'<strong>Reduce</strong> Rule 8: <code>F.val = 5</code>.'},
+    {action:'reduce', sym:'T', val:15, rule:'T → T * F', activeRule:4,
+     exp:'<strong>Reduce</strong> Rule 4: <code>T → T * F</code>. <code>T.val = 3 × 5 = <strong>15</strong></code>. Multiplication happens first!'},
+    {action:'reduce', sym:'E', val:17, rule:'E → E + T', activeRule:1,
+     exp:'<strong>Reduce</strong> Rule 1: <code>E → E + T</code>. Now we combine: <code>E.val = 2 + 15 = <strong>17</strong></code>. The grammar ensured 3×5 was evaluated before adding 2.'},
+    {action:'accept', sym:'E', val:17, rule:null, activeRule:null,
+     exp:'<strong>Accept!</strong> <code>E.val = 17</code>. Correct: 2 + (3 × 5) = 17.'},
+  ]),
+
+  '6-2*3': buildSteps([], [
+    {action:'shift', sym:'num(6)', val:6, rule:null, activeRule:8, exp:'<strong>Shift</strong> <code>num(6)</code>. <code>lexval=6</code>.'},
+    {action:'reduce', sym:'F', val:6, rule:'F → num', activeRule:8, exp:'<strong>Reduce</strong> Rule 8: <code>F.val = 6</code>.'},
+    {action:'reduce', sym:'T', val:6, rule:'T → F', activeRule:6, exp:'<strong>Reduce</strong> Rule 6: <code>T.val = 6</code>.'},
+    {action:'reduce', sym:'E', val:6, rule:'E → T', activeRule:3, exp:'<strong>Reduce</strong> Rule 3: <code>E.val = 6</code>.'},
+    {action:'shift', sym:'−', val:null, rule:null, activeRule:null, exp:'<strong>Shift</strong> <code>−</code>. E stays on stack.'},
+    {action:'shift', sym:'num(2)', val:2, rule:null, activeRule:8, exp:'<strong>Shift</strong> <code>num(2)</code>. <code>lexval=2</code>.'},
+    {action:'reduce', sym:'F', val:2, rule:'F → num', activeRule:8, exp:'<strong>Reduce</strong> Rule 8: <code>F.val = 2</code>.'},
+    {action:'reduce', sym:'T', val:2, rule:'T → F', activeRule:6, exp:'<strong>Reduce</strong> Rule 6: <code>T.val = 2</code>. Parser sees <code>*</code> next — does NOT reduce E−T yet.'},
+    {action:'shift', sym:'*', val:null, rule:null, activeRule:null, exp:'<strong>Shift</strong> <code>*</code>. Multiplication binds tighter, so reduction waits.'},
+    {action:'shift', sym:'num(3)', val:3, rule:null, activeRule:8, exp:'<strong>Shift</strong> <code>num(3)</code>. <code>lexval=3</code>.'},
+    {action:'reduce', sym:'F', val:3, rule:'F → num', activeRule:8, exp:'<strong>Reduce</strong> Rule 8: <code>F.val = 3</code>.'},
+    {action:'reduce', sym:'T', val:6, rule:'T → T * F', activeRule:4, exp:'<strong>Reduce</strong> Rule 4: <code>T.val = 2 × 3 = <strong>6</strong></code>. Multiplication done first.'},
+    {action:'reduce', sym:'E', val:0, rule:'E → E − T', activeRule:2, exp:'<strong>Reduce</strong> Rule 2: <code>E → E − T</code>. <code>E.val = 6 − 6 = <strong>0</strong></code>.'},
+    {action:'accept', sym:'E', val:0, rule:null, activeRule:null, exp:'<strong>Accept!</strong> <code>E.val = 0</code>. Correct: 6 − (2 × 3) = 0.'},
+  ]),
+
+  '10/2+3': buildSteps([], [
+    {action:'shift', sym:'num(10)', val:10, rule:null, activeRule:8, exp:'<strong>Shift</strong> <code>num(10)</code>.'},
+    {action:'reduce', sym:'F', val:10, rule:'F → num', activeRule:8, exp:'<strong>Reduce</strong> Rule 8: <code>F.val = 10</code>.'},
+    {action:'reduce', sym:'T', val:10, rule:'T → F', activeRule:6, exp:'<strong>Reduce</strong> Rule 6: <code>T.val = 10</code>.'},
+    {action:'shift', sym:'/', val:null, rule:null, activeRule:null, exp:'<strong>Shift</strong> <code>/</code>.'},
+    {action:'shift', sym:'num(2)', val:2, rule:null, activeRule:8, exp:'<strong>Shift</strong> <code>num(2)</code>. <code>lexval=2</code>.'},
+    {action:'reduce', sym:'F', val:2, rule:'F → num', activeRule:8, exp:'<strong>Reduce</strong> Rule 8: <code>F.val = 2</code>.'},
+    {action:'reduce', sym:'T', val:5, rule:'T → T / F', activeRule:5, exp:'<strong>Reduce</strong> Rule 5: <code>T → T / F</code>. <code>T.val = 10 ÷ 2 = <strong>5</strong></code>.'},
+    {action:'reduce', sym:'E', val:5, rule:'E → T', activeRule:3, exp:'<strong>Reduce</strong> Rule 3: <code>E.val = T.val = 5</code>.'},
+    {action:'shift', sym:'+', val:null, rule:null, activeRule:null, exp:'<strong>Shift</strong> <code>+</code>.'},
+    {action:'shift', sym:'num(3)', val:3, rule:null, activeRule:8, exp:'<strong>Shift</strong> <code>num(3)</code>.'},
+    {action:'reduce', sym:'F', val:3, rule:'F → num', activeRule:8, exp:'<strong>Reduce</strong> Rule 8: <code>F.val = 3</code>.'},
+    {action:'reduce', sym:'T', val:3, rule:'T → F', activeRule:6, exp:'<strong>Reduce</strong> Rule 6: <code>T.val = 3</code>.'},
+    {action:'reduce', sym:'E', val:8, rule:'E → E + T', activeRule:1, exp:'<strong>Reduce</strong> Rule 1: <code>E.val = 5 + 3 = <strong>8</strong></code>.'},
+    {action:'accept', sym:'E', val:8, rule:null, activeRule:null, exp:'<strong>Accept!</strong> <code>E.val = 8</code>. Correct: (10 ÷ 2) + 3 = 8.'},
+  ]),
+
+  '2*3*4': buildSteps([], [
+    {action:'shift', sym:'num(2)', val:2, rule:null, activeRule:8, exp:'<strong>Shift</strong> <code>num(2)</code>.'},
+    {action:'reduce', sym:'F', val:2, rule:'F → num', activeRule:8, exp:'<strong>Reduce</strong> Rule 8: <code>F.val = 2</code>.'},
+    {action:'reduce', sym:'T', val:2, rule:'T → F', activeRule:6, exp:'<strong>Reduce</strong> Rule 6: <code>T.val = 2</code>.'},
+    {action:'shift', sym:'*', val:null, rule:null, activeRule:null, exp:'<strong>Shift</strong> <code>*</code>.'},
+    {action:'shift', sym:'num(3)', val:3, rule:null, activeRule:8, exp:'<strong>Shift</strong> <code>num(3)</code>.'},
+    {action:'reduce', sym:'F', val:3, rule:'F → num', activeRule:8, exp:'<strong>Reduce</strong> Rule 8: <code>F.val = 3</code>.'},
+    {action:'reduce', sym:'T', val:6, rule:'T → T * F', activeRule:4, exp:'<strong>Reduce</strong> Rule 4: <code>T.val = 2 × 3 = <strong>6</strong></code>. Left-to-right associativity: first multiplication done.'},
+    {action:'shift', sym:'*', val:null, rule:null, activeRule:null, exp:'<strong>Shift</strong> second <code>*</code>. The grammar is left-recursive for T, so 2*3 is already reduced to T.'},
+    {action:'shift', sym:'num(4)', val:4, rule:null, activeRule:8, exp:'<strong>Shift</strong> <code>num(4)</code>.'},
+    {action:'reduce', sym:'F', val:4, rule:'F → num', activeRule:8, exp:'<strong>Reduce</strong> Rule 8: <code>F.val = 4</code>.'},
+    {action:'reduce', sym:'T', val:24, rule:'T → T * F', activeRule:4, exp:'<strong>Reduce</strong> Rule 4: <code>T.val = 6 × 4 = <strong>24</strong></code>. Second multiplication: (2×3)×4 — left-associative!'},
+    {action:'reduce', sym:'E', val:24, rule:'E → T', activeRule:3, exp:'<strong>Reduce</strong> Rule 3: <code>E.val = T.val = 24</code>.'},
+    {action:'accept', sym:'E', val:24, rule:null, activeRule:null, exp:'<strong>Accept!</strong> <code>E.val = 24</code>. Correct: ((2 × 3) × 4) = 24. Left-recursion → left-associativity.'},
+  ]),
+};
+
+function buildSteps(tokens, steps) { return steps; }
+
+// ─── State ─────────────────────────────────────────────────────────────────────
+let steps = [];
+let stepIdx = -1;
+let treeNodes = {};
+let treeEdges = [];
+let autoTimer = null;
+
+// ─── Tree Builder ──────────────────────────────────────────────────────────────
+let nodeIdCounter = 0;
+
+function initExpression() {
+  const expr = document.getElementById('exprSelect').value;
+  steps = EXPRESSIONS[expr] || [];
+  stepIdx = -1;
+  treeNodes = {};
+  treeEdges = [];
+  nodeIdCounter = 0;
+  renderStepLog();
+  renderStack([]);
+  clearActiveRules();
+  clearCanvas();
+  document.getElementById('currentExplanation').innerHTML =
+    'Click <strong>Next →</strong> to step through the bottom-up parse. Watch how attributes are synthesized upward.';
+  document.getElementById('stepCounter').textContent = `Step 0 / ${steps.length}`;
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+}
+
+function nextStep() {
+  if (stepIdx >= steps.length - 1) return;
+  stepIdx++;
+  applyStep(steps[stepIdx]);
+  updateUI();
+}
+
+function prevStep() {
+  if (stepIdx < 0) return;
+  stepIdx--;
+  // Rebuild tree from scratch
+  treeNodes = {};
+  treeEdges = [];
+  nodeIdCounter = 0;
+  const stackHistory = [];
+  for (let i = 0; i <= stepIdx; i++) {
+    applyStep(steps[i], true);
+  }
+  updateUI();
+}
+
+let stackState = [];
+
+function applyStep(step, quiet = false) {
+  if (step.action === 'shift') {
+    const nid = ++nodeIdCounter;
+    treeNodes[nid] = {
+      id: nid, sym: step.sym, val: step.val,
+      state: 'terminal', x: 0, y: 0, children: []
+    };
+    stackState.push({ sym: step.sym, val: step.val, nid });
+  } else if (step.action === 'reduce') {
+    // Figure out how many symbols to pop
+    const rule = step.rule || '';
+    let rhs = 0;
+    if (rule.includes('→')) {
+      const rhsStr = rule.split('→')[1].trim();
+      if (rhsStr === 'ε') rhs = 0;
+      else rhs = rhsStr.split(' ').filter(s => s.length > 0).length;
+    }
+    const popped = stackState.splice(stackState.length - rhs, rhs);
+    const nid = ++nodeIdCounter;
+    const children = popped.map(p => p.nid);
+    treeNodes[nid] = {
+      id: nid, sym: step.sym, val: step.val,
+      state: 'active', x: 0, y: 0, children
+    };
+    children.forEach(cid => {
+      if (treeNodes[cid]) treeNodes[cid].state = 'done';
+      treeEdges.push({ from: nid, to: cid });
+    });
+    stackState.push({ sym: step.sym, val: step.val, nid });
+  } else if (step.action === 'accept') {
+    // Mark all done
+    Object.values(treeNodes).forEach(n => n.state = 'done');
+  }
+
+  // Reset 'active' to 'done' for all except last added
+  const lastNid = nodeIdCounter;
+  Object.values(treeNodes).forEach(n => {
+    if (n.state === 'active' && n.id !== lastNid) n.state = 'done';
+  });
+}
+
+function updateUI() {
+  layoutTree();
+  drawTree();
+  renderStack(stackState);
+  updateStepLog();
+  updateActiveRule();
+  const step = steps[stepIdx];
+  if (step) {
+    document.getElementById('currentExplanation').innerHTML = step.exp;
+  }
+  document.getElementById('stepCounter').textContent = `Step ${stepIdx + 1} / ${steps.length}`;
+
+  if (stepIdx === steps.length - 1) {
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+}
+
+function autoPlay() {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; return; }
+  if (stepIdx < 0) initExpression();
+  autoTimer = setInterval(() => {
+    if (stepIdx >= steps.length - 1) { clearInterval(autoTimer); autoTimer = null; return; }
+    nextStep();
+  }, 1400);
+}
+
+// ─── Tree Layout (BOTTOM-UP: leaves at bottom, root grows upward) ─────────────
+function layoutTree() {
+  const allNodes = Object.values(treeNodes);
+  if (allNodes.length === 0) return;
+
+  const canvasEl = document.getElementById('treeCanvas');
+  const W = canvasEl.width, H = canvasEl.height;
+  const margin = 50;
+
+  // Build set of all children so we can find roots (nodes with no parent)
+  const childSet = new Set(treeEdges.map(e => e.to));
+  // ALL nodes not pointed to as a child are roots of their subtree
+  const roots = allNodes.map(n => n.id).filter(id => !childSet.has(id));
+
+  function subtreeWidth(nid) {
+    const node = treeNodes[nid];
+    if (!node.children.length) return 1;
+    return node.children.reduce((s, c) => s + subtreeWidth(c), 0);
+  }
+
+  function assignX(nid, startX) {
+    const node = treeNodes[nid];
+    if (!node.children.length) { node.x = startX + 0.5; return; }
+    let cur = startX;
+    const childXs = [];
+    node.children.forEach(c => {
+      assignX(c, cur);
+      childXs.push(treeNodes[c].x);
+      cur += subtreeWidth(c);
+    });
+    node.x = (childXs[0] + childXs[childXs.length - 1]) / 2;
+  }
+
+  // Bottom-up depth: leaves get depth 0 (bottom row), parents get depth = max_child_depth + 1
+  // This means terminals always sit at the bottom, and the tree grows UPWARD with each reduce.
+  function assignDepthBottomUp(nid) {
+    const node = treeNodes[nid];
+    if (!node.children.length) {
+      node.depth = 0;
+      return 0;
+    }
+    const maxChildDepth = Math.max(...node.children.map(c => assignDepthBottomUp(c)));
+    node.depth = maxChildDepth + 1;
+    return node.depth;
+  }
+
+  // Lay out all forest trees side by side
+  let curX = 0;
+  roots.forEach(rid => {
+    assignX(rid, curX);
+    assignDepthBottomUp(rid);
+    curX += subtreeWidth(rid);
+  });
+
+  // Isolated nodes (no children, no parent yet — freshly shifted terminals) get depth 0
+  allNodes.forEach(n => { if (n.depth === undefined) n.depth = 0; });
+
+  const globalMaxDepth = Math.max(...allNodes.map(n => n.depth), 1);
+  const maxX = Math.max(...allNodes.map(n => n.x), 0);
+
+  const sx = maxX > 0 ? (W - margin * 2) / maxX : (W - margin * 2);
+  const verticalSpacing = Math.min((H - margin * 2 - 20) / globalMaxDepth, 90);
+  const bottomY = H - margin;
+
+  allNodes.forEach(n => {
+    n.px = margin + n.x * sx;
+    // BOTTOM-UP: depth 0 = terminals anchored at BOTTOM; higher depth = higher up the canvas
+    n.py = bottomY - n.depth * verticalSpacing;
+  });
+}
+
+// ─── Draw Tree ─────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('treeCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const parent = canvas.parentElement;
+  const rect = parent.getBoundingClientRect();
+  const stackH = 46;
+  const legendH = 36;
+  const inputH = 56;
+  canvas.width = rect.width;
+  canvas.height = rect.height - stackH - legendH - inputH;
+  if (Object.keys(treeNodes).length > 0) { layoutTree(); drawTree(); }
+}
+
+window.addEventListener('resize', resizeCanvas);
+setTimeout(resizeCanvas, 100);
+
+function clearCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#0d0f1a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Ghost message
+  ctx.font = '14px Sora, sans-serif';
+  ctx.fillStyle = '#1f2340';
+  ctx.textAlign = 'center';
+  ctx.fillText('Load an expression to begin', canvas.width / 2, canvas.height / 2);
+}
+
+function drawArrowhead(x1, y1, x2, y2, color) {
+  // Draw arrowhead at (x2,y2) pointing from (x1,y1) to (x2,y2)
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const aLen = 9, aWid = 5;
+  ctx.save();
+  ctx.translate(x2, y2);
+  ctx.rotate(angle);
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(-aLen, -aWid);
+  ctx.lineTo(-aLen, aWid);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawTree() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#0d0f1a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // "↑ attributes synthesized upward" label at bottom-left
+  ctx.font = `11px 'Sora', sans-serif`;
+  ctx.fillStyle = '#2a3060';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('↑  attributes synthesized upward  (bottom-up)', 16, canvas.height - 8);
+
+  // Draw edges — arrow points FROM child UP TO parent (showing attribute flow ↑)
+  const R = 28;
+  treeEdges.forEach(edge => {
+    const parent = treeNodes[edge.from]; // higher in tree = smaller py
+    const child  = treeNodes[edge.to];  // lower in tree  = larger py
+    if (!parent || !child) return;
+
+    // Line from child up to parent
+    const dx = parent.px - child.px;
+    const dy = parent.py - child.py;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    // Start point: edge of child circle
+    const sx = child.px  + (dx/dist) * R;
+    const sy = child.py  + (dy/dist) * R;
+    // End point: edge of parent circle
+    const ex = parent.px - (dx/dist) * R;
+    const ey = parent.py - (dy/dist) * R;
+
+    const isDone = parent.state === 'done' || parent.state === 'active';
+    const edgeColor = isDone ? '#1e4a30' : '#1e2640';
+    const arrowColor = isDone ? '#2a6a42' : '#2a3660';
+
+    const midY = (sy + ey) / 2;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.bezierCurveTo(sx, midY, ex, midY, ex, ey);
+    ctx.strokeStyle = edgeColor;
+    ctx.lineWidth = isDone ? 2 : 1.5;
+    ctx.stroke();
+
+    // Arrowhead at parent end (pointing upward toward parent)
+    drawArrowhead(sx, sy, ex, ey, arrowColor);
+  });
+
+  // Draw nodes
+  Object.values(treeNodes).forEach(node => {
+    const x = node.px, y = node.py;
+
+    // Colors
+    let fill, border;
+    if (node.state === 'terminal') { fill = '#3a2a10'; border = '#f5a623'; }
+    else if (node.state === 'active') { fill = '#2a3a70'; border = '#5b8af5'; }
+    else if (node.state === 'done') { fill = '#1a3a2a'; border = '#3dd68c'; }
+    else { fill = '#1e2440'; border = '#3a4070'; }
+
+    // Glow for active
+    if (node.state === 'active') {
+      ctx.shadowColor = '#5b8af5';
+      ctx.shadowBlur = 18;
+    }
+
+    ctx.beginPath();
+    ctx.arc(x, y, R, 0, Math.PI * 2);
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.strokeStyle = border;
+    ctx.lineWidth = node.state === 'active' ? 2.5 : 1.5;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Symbol
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = `bold 13px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // Shorten symbol
+    let dispSym = node.sym;
+    if (dispSym.startsWith('num(')) dispSym = dispSym.replace('num(', '').replace(')', '');
+    ctx.fillText(dispSym, x, y - (node.val !== null ? 5 : 0));
+
+    // Val
+    if (node.val !== null) {
+      ctx.font = `11px 'JetBrains Mono', monospace`;
+      ctx.fillStyle = node.state === 'terminal' ? '#f5a623' :
+                      node.state === 'active' ? '#5b8af5' : '#3dd68c';
+      ctx.fillText(`.val=${node.val}`, x, y + 9);
+    }
+  });
+}
+
+// ─── Stack Display ─────────────────────────────────────────────────────────────
+function renderStack(stack) {
+  const el = document.getElementById('stackDisplay');
+  el.innerHTML = '';
+  if (!stack.length) {
+    el.innerHTML = '<span style="color:#1f2340;font-size:11px;">empty</span>';
+    return;
+  }
+  const step = steps[stepIdx];
+  stack.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'stack-item';
+    if (i === stack.length - 1 && step) {
+      if (step.action === 'shift') div.classList.add('just-pushed');
+      if (step.action === 'reduce') div.classList.add('reducing');
+    }
+    div.innerHTML = `<span class="sym">${item.sym}</span>${item.val !== null ? `<span class="val">[${item.val}]</span>` : ''}`;
+    el.appendChild(div);
+  });
+  // bottom arrow indicator
+  const arr = document.createElement('span');
+  arr.style.color = '#3a4070';
+  arr.style.fontSize = '11px';
+  arr.textContent = '← top';
+  el.appendChild(arr);
+}
+
+// ─── Steps Log ────────────────────────────────────────────────────────────────
+function renderStepLog() {
+  const log = document.getElementById('stepsLog');
+  log.innerHTML = '';
+  steps.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'step-entry future';
+    div.id = `step-entry-${i}`;
+    const actionLabel = `<span class="step-action ${s.action}">${s.action.toUpperCase()}</span>`;
+    const sym = `<code style="color:#a78bfa">${s.sym}</code>`;
+    const ruleStr = s.rule ? `<span style="color:#f5a623;font-size:10px;font-family:JetBrains Mono"> ${s.rule}</span>` : '';
+    div.innerHTML = `
+      <div class="step-num">Step ${i + 1}</div>
+      <div>${actionLabel} ${sym}${ruleStr}</div>
+      ${s.val !== null && s.action !== 'shift' ? `<div class="step-attr">→ .val = ${s.val}</div>` : ''}
+    `;
+    log.appendChild(div);
+  });
+}
+
+function updateStepLog() {
+  steps.forEach((_, i) => {
+    const el = document.getElementById(`step-entry-${i}`);
+    if (!el) return;
+    el.className = 'step-entry ' + (i < stepIdx ? 'past' : i === stepIdx ? 'current' : 'future');
+    if (i === stepIdx) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+}
+
+// ─── Active Rule Highlight ────────────────────────────────────────────────────
+function clearActiveRules() {
+  document.querySelectorAll('#grammarTable tr').forEach(r => r.classList.remove('active-rule'));
+}
+
+function updateActiveRule() {
+  clearActiveRules();
+  const step = steps[stepIdx];
+  if (step && step.activeRule) {
+    const row = document.getElementById(`rule-${step.activeRule}`);
+    if (row) row.classList.add('active-rule');
+  }
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+stackState = [];
+clearCanvas();
+renderStepLog();
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextStep(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prevStep(); }
+});
+</script>
+</body>
+</html>
